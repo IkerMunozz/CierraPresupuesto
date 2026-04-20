@@ -1,0 +1,14 @@
+{
+  "generate": "Generar",
+  "serviceType": "Tipo de Servicio",
+  "description": "Descripción",
+  "price": "Precio",
+  "clientType": "Tipo de Cliente",
+  "context": "Contexto",
+  "submit": "Enviar",
+  "loading": "Cargando...",
+  "error": "Error",
+  "quote": "Presupuesto",
+  "analysis": "Análisis",
+  "improvedQuote": "Presupuesto Mejorado"
+}
