@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  CompanyInput, 
-  ClientInput, 
-  ConceptInput, 
-  QuoteLineInput, 
-  ProfessionalQuoteInput 
+import {
+  CompanyInput,
+  ClientInput,
+  ConceptInput,
+  QuoteLineInput,
+  ProfessionalQuoteInput,
 } from '@/lib/domain/professionalQuoteSchemas';
 
 interface StepProps {
@@ -19,14 +19,26 @@ interface StepProps {
 
 // --- Componentes de Apoyo ---
 
-function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="w-full max-w-md rounded-md bg-white border border-slate-300 p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+          <h3 className="text-base font-semibold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-700 text-sm">
+            ✕
+          </button>
         </div>
         {children}
       </div>
@@ -39,13 +51,19 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
 function Step1Company({ onNext, data, updateData }: Omit<StepProps, 'onPrev'>) {
   const [companies, setCompanies] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newCompany, setNewCompany] = useState<CompanyInput>({ name: '', phone: '', email: '', address: '', footerInfo: '' });
+  const [newCompany, setNewCompany] = useState<CompanyInput>({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    footerInfo: '',
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/companies')
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
           setCompanies(data);
         } else {
@@ -53,7 +71,7 @@ function Step1Company({ onNext, data, updateData }: Omit<StepProps, 'onPrev'>) {
         }
         setLoading(false);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Error fetching companies:', error);
         setLoading(false);
       });
@@ -76,83 +94,80 @@ function Step1Company({ onNext, data, updateData }: Omit<StepProps, 'onPrev'>) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Paso 1: Emisor del presupuesto</h2>
-        <p className="text-sm text-slate-500">Elige la empresa que emite este presupuesto o añade una nueva.</p>
-      </div>
+      <h2 className="text-base font-semibold text-slate-800 mb-1">Emisor</h2>
+      <p className="text-sm text-slate-500 mb-4">Selecciona la empresa que emite el presupuesto.</p>
 
       {loading ? (
-        <div className="h-32 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-20 animate-pulse bg-slate-100 rounded-sm" />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           {companies.map((c) => (
             <button
               key={c.id}
               onClick={() => updateData({ companyId: c.id })}
-              className={`flex flex-col items-start rounded-2xl border-2 p-4 transition ${
-                data.companyId === c.id ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 bg-white hover:border-slate-200'
+              className={`flex flex-col items-start rounded-sm border p-3 text-left transition ${
+                data.companyId === c.id ? 'border-slate-800 bg-slate-50' : 'border-slate-200 hover:border-slate-400'
               }`}
             >
-              <span className="font-bold text-slate-900">{c.name}</span>
+              <span className="font-medium text-slate-800 text-sm">{c.name}</span>
               <span className="text-xs text-slate-500">{c.email || 'Sin email'}</span>
             </button>
           ))}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-4 text-slate-500 hover:border-slate-300 hover:text-slate-600 transition"
+            className="flex items-center justify-center rounded-sm border border-dashed border-slate-300 p-3 text-slate-500 hover:border-slate-500 hover:text-slate-700 transition"
           >
-            <span className="text-2xl">+</span>
-            <span className="text-sm font-medium">Añadir empresa</span>
+            <span className="text-sm">+ Añadir</span>
           </button>
         </div>
       )}
 
-      <div className="flex justify-end pt-4">
+      <div className="flex justify-end pt-4 border-t border-slate-200 mt-4">
         <button
           disabled={!data.companyId}
           onClick={onNext}
-          className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-sm bg-slate-800 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
         >
-          Siguiente
+          Continuar →
         </button>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nueva Empresa">
-        <form onSubmit={handleAddCompany} className="space-y-4">
+        <form onSubmit={handleAddCompany} className="space-y-3">
           <input
             placeholder="Nombre de la empresa *"
             required
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newCompany.name}
-            onChange={e => setNewCompany({ ...newCompany, name: e.target.value })}
+            onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
           />
           <input
             placeholder="Teléfono"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newCompany.phone}
-            onChange={e => setNewCompany({ ...newCompany, phone: e.target.value })}
+            onChange={(e) => setNewCompany({ ...newCompany, phone: e.target.value })}
           />
           <input
             placeholder="Email"
             type="email"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newCompany.email}
-            onChange={e => setNewCompany({ ...newCompany, email: e.target.value })}
+            onChange={(e) => setNewCompany({ ...newCompany, email: e.target.value })}
           />
           <textarea
             placeholder="Dirección"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newCompany.address}
-            onChange={e => setNewCompany({ ...newCompany, address: e.target.value })}
+            onChange={(e) => setNewCompany({ ...newCompany, address: e.target.value })}
           />
           <textarea
-            placeholder="Información en el pie (Datos legales, etc.)"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            placeholder="Información en el pie"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newCompany.footerInfo}
-            onChange={e => setNewCompany({ ...newCompany, footerInfo: e.target.value })}
+            onChange={(e) => setNewCompany({ ...newCompany, footerInfo: e.target.value })}
           />
-          <button className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-            Guardar Empresa
+          <button className="w-full rounded-sm bg-slate-800 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            Guardar
           </button>
         </form>
       </Modal>
@@ -168,8 +183,8 @@ function Step2Client({ onNext, onPrev, data, updateData }: StepProps) {
 
   useEffect(() => {
     fetch('/api/clients')
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
           setClients(data);
         } else {
@@ -177,7 +192,7 @@ function Step2Client({ onNext, onPrev, data, updateData }: StepProps) {
         }
         setLoading(false);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Error fetching clients:', error);
         setLoading(false);
       });
@@ -199,87 +214,87 @@ function Step2Client({ onNext, onPrev, data, updateData }: StepProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Paso 2: Cliente</h2>
-        <p className="text-sm text-slate-500">¿A quién va dirigido este presupuesto?</p>
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-base font-semibold text-slate-800 mb-1">Cliente</h2>
+      <p className="text-sm text-slate-500 mb-4">Selecciona el cliente destinatario.</p>
 
       {loading ? (
-        <div className="h-32 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-20 animate-pulse bg-slate-100 rounded-sm" />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           {clients.map((c) => (
             <button
               key={c.id}
               onClick={() => updateData({ clientId: c.id })}
-              className={`flex flex-col items-start rounded-2xl border-2 p-4 transition ${
-                data.clientId === c.id ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 bg-white hover:border-slate-200'
+              className={`flex flex-col items-start rounded-sm border p-3 text-left transition ${
+                data.clientId === c.id ? 'border-slate-800 bg-slate-50' : 'border-slate-200 hover:border-slate-400'
               }`}
             >
-              <span className="font-bold text-slate-900">{c.name}</span>
+              <span className="font-medium text-slate-800 text-sm">{c.name}</span>
               <span className="text-xs text-slate-500">{c.email || 'Sin email'}</span>
             </button>
           ))}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-4 text-slate-500 hover:border-slate-300 hover:text-slate-600 transition"
+            className="flex items-center justify-center rounded-sm border border-dashed border-slate-300 p-3 text-slate-500 hover:border-slate-500 hover:text-slate-700 transition"
           >
-            <span className="text-2xl">+</span>
-            <span className="text-sm font-medium">Nuevo cliente</span>
+            <span className="text-sm">+ Nuevo</span>
           </button>
         </div>
       )}
 
-      <div className="flex justify-between pt-4">
-        <button onClick={onPrev} className="rounded-xl border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-          Anterior
+      <div className="flex justify-between pt-4 border-t border-slate-200 mt-4">
+        <button
+          onClick={onPrev}
+          className="rounded-sm border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          ← Atrás
         </button>
         <button
           disabled={!data.clientId}
           onClick={onNext}
-          className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-sm bg-slate-800 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
         >
-          Siguiente
+          Continuar →
         </button>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nuevo Cliente">
-        <form onSubmit={handleAddClient} className="space-y-4">
+        <form onSubmit={handleAddClient} className="space-y-3">
           <input
             placeholder="Nombre del cliente/empresa *"
             required
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newClient.name}
-            onChange={e => setNewClient({ ...newClient, name: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
           />
           <input
             placeholder="CIF / NIF"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newClient.taxId}
-            onChange={e => setNewClient({ ...newClient, taxId: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, taxId: e.target.value })}
           />
           <input
             placeholder="Email"
             type="email"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newClient.email}
-            onChange={e => setNewClient({ ...newClient, email: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
           />
           <input
             placeholder="Teléfono"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newClient.phone}
-            onChange={e => setNewClient({ ...newClient, phone: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
           />
           <textarea
             placeholder="Dirección"
-            className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={newClient.address}
-            onChange={e => setNewClient({ ...newClient, address: e.target.value })}
+            onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
           />
-          <button className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-            Guardar Cliente
+          <button className="w-full rounded-sm bg-slate-800 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            Guardar
           </button>
         </form>
       </Modal>
@@ -289,69 +304,69 @@ function Step2Client({ onNext, onPrev, data, updateData }: StepProps) {
 
 function Step3GeneralData({ onNext, onPrev, data, updateData }: StepProps) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Paso 3: Datos generales</h2>
-        <p className="text-sm text-slate-500">Información básica del documento.</p>
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-base font-semibold text-slate-800 mb-1">Datos del documento</h2>
+      <p className="text-sm text-slate-500 mb-4">Configura las opciones generales.</p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fecha *</label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-600">Fecha *</label>
           <input
             type="date"
             required
-            className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-blue-500 outline-none transition"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={data.date}
-            onChange={e => updateData({ date: e.target.value })}
+            onChange={(e) => updateData({ date: e.target.value })}
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Válido hasta</label>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-600">Válido hasta</label>
           <input
             type="date"
-            className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-blue-500 outline-none transition"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={data.validUntil || ''}
-            onChange={e => updateData({ validUntil: e.target.value })}
+            onChange={(e) => updateData({ validUntil: e.target.value })}
           />
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Forma de pago</label>
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-xs font-medium text-slate-600">Forma de pago</label>
           <select
-            className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-blue-500 outline-none transition bg-white"
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm bg-white"
             value={data.paymentMethod || ''}
-            onChange={e => updateData({ paymentMethod: e.target.value })}
+            onChange={(e) => updateData({ paymentMethod: e.target.value })}
           >
-            <option value="">Selecciona forma de pago...</option>
+            <option value="">Selecciona...</option>
             <option value="Transferencia Bancaria">Transferencia Bancaria</option>
-            <option value="Tarjeta de Crédito/Débito">Tarjeta de Crédito/Débito</option>
+            <option value="Tarjeta de Crédito/Débito">Tarjeta</option>
             <option value="PayPal">PayPal</option>
             <option value="Efectivo">Efectivo</option>
-            <option value="Giro Bancario">Giro Bancario</option>
             <option value="A convenir">A convenir</option>
           </select>
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Observaciones (para el cliente)</label>
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-xs font-medium text-slate-600">Observaciones</label>
           <textarea
-            placeholder="Detalles sobre el servicio, plazos, etc."
-            rows={3}
-            className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-blue-500 outline-none transition"
+            placeholder="Notas para el cliente..."
+            rows={2}
+            className="w-full rounded-sm border border-slate-300 p-2 text-sm"
             value={data.observations || ''}
-            onChange={e => updateData({ observations: e.target.value })}
+            onChange={(e) => updateData({ observations: e.target.value })}
           />
         </div>
       </div>
 
-      <div className="flex justify-between pt-4">
-        <button onClick={onPrev} className="rounded-xl border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-          Anterior
+      <div className="flex justify-between pt-4 border-t border-slate-200 mt-4">
+        <button
+          onClick={onPrev}
+          className="rounded-sm border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          ← Atrás
         </button>
         <button
           onClick={onNext}
-          className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          className="rounded-sm bg-slate-800 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
         >
-          Siguiente
+          Continuar →
         </button>
       </div>
     </div>
@@ -360,9 +375,9 @@ function Step3GeneralData({ onNext, onPrev, data, updateData }: StepProps) {
 
 function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
   const router = useRouter();
-  const [lines, setLines] = useState<QuoteLineInput[]>(data.lines || [
-    { name: '', description: '', quantity: 1, unitPrice: 0, discount: 0, iva: 21 }
-  ]);
+  const [lines, setLines] = useState<QuoteLineInput[]>(
+    data.lines || [{ name: '', description: '', quantity: 1, unitPrice: 0, discount: 0, iva: 21 }],
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const addLine = () => {
@@ -420,71 +435,69 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Paso 4: Líneas del presupuesto</h2>
-          <p className="text-sm text-slate-500">Detalla los servicios y precios.</p>
+          <h2 className="text-base font-semibold text-slate-800">Líneas</h2>
         </div>
-        <button 
+        <button
           onClick={addLine}
-          className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-bold text-blue-600 hover:bg-blue-100 transition"
+          className="rounded-sm border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:border-slate-500 transition"
         >
-          + Añadir línea
+          + Añadir
         </button>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-100 text-slate-400">
-              <th className="pb-3 pr-4 font-bold uppercase tracking-wider">Concepto</th>
-              <th className="pb-3 pr-4 font-bold uppercase tracking-wider w-20">Cant.</th>
-              <th className="pb-3 pr-4 font-bold uppercase tracking-wider w-32">P. Unit.</th>
-              <th className="pb-3 pr-4 font-bold uppercase tracking-wider w-24">IVA %</th>
-              <th className="pb-3 font-bold uppercase tracking-wider text-right">Total</th>
-              <th className="pb-3 pl-4"></th>
+            <tr className="border-b border-slate-200 text-slate-500">
+              <th className="pb-2 pr-3 font-medium text-xs uppercase">Concepto</th>
+              <th className="pb-2 pr-3 font-medium text-xs uppercase w-16">Cant.</th>
+              <th className="pb-2 pr-3 font-medium text-xs uppercase w-24">P. Unit</th>
+              <th className="pb-2 pr-3 font-medium text-xs uppercase w-16">IVA</th>
+              <th className="pb-2 font-medium text-xs uppercase text-right">Total</th>
+              <th className="pb-2 pl-2"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {lines.map((line, idx) => (
-              <tr key={idx} className="group">
-                <td className="py-4 pr-4">
+              <tr key={idx}>
+                <td className="py-3 pr-3">
                   <input
-                    placeholder="Nombre del servicio"
-                    className="w-full font-medium text-slate-900 outline-none"
+                    placeholder="Servicio..."
+                    className="w-full font-medium text-slate-800 text-sm outline-none"
                     value={line.name}
-                    onChange={e => updateLine(idx, 'name', e.target.value)}
+                    onChange={(e) => updateLine(idx, 'name', e.target.value)}
                   />
-                  <textarea
-                    placeholder="Descripción (opcional)"
-                    className="w-full mt-1 text-slate-500 outline-none resize-none"
-                    rows={1}
+                  <input
+                    placeholder="Descripción"
+                    className="w-full mt-1 text-slate-500 text-xs outline-none"
                     value={line.description || ''}
-                    onChange={e => updateLine(idx, 'description', e.target.value)}
+                    onChange={(e) => updateLine(idx, 'description', e.target.value)}
                   />
                 </td>
                 <td className="py-4 pr-4">
                   <input
                     type="number"
-                    className="w-full rounded-lg border border-slate-100 p-1.5"
+                    className="w-full rounded-sm border border-slate-200 p-1 text-sm"
                     value={line.quantity}
-                    onChange={e => updateLine(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updateLine(idx, 'quantity', parseFloat(e.target.value) || 0)}
                   />
                 </td>
                 <td className="py-4 pr-4">
                   <input
                     type="number"
-                    className="w-full rounded-lg border border-slate-100 p-1.5"
+                    className="w-full rounded-sm border border-slate-200 p-1 text-sm"
                     value={line.unitPrice}
-                    onChange={e => updateLine(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updateLine(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
                   />
                 </td>
                 <td className="py-4 pr-4">
                   <select
-                    className="w-full rounded-lg border border-slate-100 p-1.5 bg-white"
+                    className="w-full rounded-sm border border-slate-200 p-1 text-sm bg-white"
                     value={line.iva}
-                    onChange={e => updateLine(idx, 'iva', parseInt(e.target.value))}
+                    onChange={(e) => updateLine(idx, 'iva', parseInt(e.target.value))}
                   >
                     <option value={21}>21%</option>
                     <option value={10}>10%</option>
@@ -492,11 +505,14 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
                     <option value={0}>0%</option>
                   </select>
                 </td>
-                <td className="py-4 text-right font-bold text-slate-900">
-                  {((line.quantity * line.unitPrice) * (1 + line.iva / 100)).toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+                <td className="py-4 text-right font-medium text-slate-800">
+                  {(line.quantity * line.unitPrice * (1 + line.iva / 100)).toLocaleString('es-ES', {
+                    minimumFractionDigits: 2,
+                  })}{' '}
+                  €
                 </td>
                 <td className="py-4 pl-4 text-right">
-                  <button onClick={() => removeLine(idx)} className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100">
+                  <button onClick={() => removeLine(idx)} className="text-slate-400 hover:text-red-600 text-sm">
                     ✕
                   </button>
                 </td>
@@ -506,28 +522,31 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
         </table>
       </div>
 
-      <div className="flex flex-col items-end gap-2 pt-6 border-t border-slate-100">
-        <div className="flex w-64 justify-between text-sm text-slate-500">
-          <span>Subtotal neto</span>
+      <div className="flex flex-col items-end gap-1 pt-4 border-t border-slate-200">
+        <div className="flex w-48 justify-between text-sm text-slate-500">
+          <span>Subtotal</span>
           <span>{calculateSubtotal().toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span>
         </div>
-        <div className="flex w-64 justify-between text-lg font-bold text-slate-900">
-          <span>TOTAL (INC. IVA)</span>
+        <div className="flex w-48 justify-between text-base font-semibold text-slate-800">
+          <span>TOTAL</span>
           <span>{calculateTotal().toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span>
         </div>
       </div>
 
-      <div className="flex justify-between pt-8">
-        <button onClick={onPrev} className="rounded-xl border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-          Anterior
+      <div className="flex justify-between pt-4 border-t border-slate-200 mt-4">
+        <button
+          onClick={onPrev}
+          className="rounded-sm border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          ← Atrás
         </button>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <button
             disabled={isSaving}
             onClick={handleCreate}
-            className="rounded-xl bg-blue-600 px-8 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-sm bg-slate-800 px-6 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
           >
-            {isSaving ? 'Guardando...' : 'Crear presupuesto'}
+            {isSaving ? 'Guardando...' : 'Crear'}
           </button>
         </div>
       </div>
@@ -551,21 +570,30 @@ export default function ProfessionalQuoteCreator() {
   });
 
   const updateData = (newData: Partial<ProfessionalQuoteInput>) => {
-    setFormData(prev => ({ ...prev, ...newData }));
+    setFormData((prev) => ({ ...prev, ...newData }));
   };
 
-  const nextStep = () => setStep(s => s + 1);
-  const prevStep = () => setStep(s => s - 1);
+  const nextStep = () => setStep((s) => s + 1);
+  const prevStep = () => setStep((s) => s - 1);
+
+  const stepTitles = ['Empresa', 'Cliente', 'Datos', 'Líneas'];
 
   return (
-    <div className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-xl sm:p-10">
-      {/* Progress Bar */}
-      <div className="mb-10 flex gap-2">
-        {[1, 2, 3, 4].map((s) => (
-          <div 
-            key={s} 
-            className={`h-1.5 flex-1 rounded-full transition-colors ${step >= s ? 'bg-blue-600' : 'bg-slate-100'}`} 
-          />
+    <div className="rounded-md border border-slate-300 bg-white p-5">
+      {/* Progress Steps */}
+      <div className="mb-6 flex items-center gap-1 text-sm">
+        {stepTitles.map((title, idx) => (
+          <div key={idx} className="flex items-center">
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-sm ${
+                step === idx + 1 ? 'bg-slate-800 text-white' : 'text-slate-500'
+              }`}
+            >
+              <span className="font-medium">{idx + 1}</span>
+              <span>{title}</span>
+            </div>
+            {idx < stepTitles.length - 1 && <span className="mx-1 text-slate-300">/</span>}
+          </div>
         ))}
       </div>
 

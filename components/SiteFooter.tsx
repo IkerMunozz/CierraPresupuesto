@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function SiteFooter() {
   return (
@@ -6,10 +7,16 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-10">
         <div className="grid gap-10 md:grid-cols-4">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 font-semibold text-slate-900">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-600 text-white">CP</span>
-              <span>CierraPresupuesto</span>
-            </div>
+            <Link href="/" className="inline-flex items-center">
+              <div className="relative h-14 w-56">
+                <Image 
+                  src="/logo.png" 
+                  alt="CierraPresupuesto" 
+                  fill 
+                  className="object-contain object-left"
+                />
+              </div>
+            </Link>
             <p className="text-sm leading-6 text-slate-600">
               Presupuestos con IA para autónomos: genera, analiza y mejora propuestas para cerrar más ventas.
             </p>
@@ -20,14 +27,14 @@ export default function SiteFooter() {
             <p className="text-sm font-semibold text-slate-900">Producto</p>
             <ul className="space-y-2 text-sm text-slate-600">
               <li>
-                <a className="transition hover:text-slate-900" href="/#funcionalidades">
+                <Link className="transition hover:text-slate-900" href="/#funcionalidades">
                   Funcionalidades
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="transition hover:text-slate-900" href="/#precios">
+                <Link className="transition hover:text-slate-900" href="/#pricing">
                   Precios
-                </a>
+                </Link>
               </li>
               <li>
                 <Link className="transition hover:text-slate-900" href="/app">
@@ -41,19 +48,19 @@ export default function SiteFooter() {
             <p className="text-sm font-semibold text-slate-900">Recursos</p>
             <ul className="space-y-2 text-sm text-slate-600">
               <li>
-                <a className="transition hover:text-slate-900" href="/#guias">
+                <Link className="transition hover:text-slate-900" href="/#guias">
                   Guías por temas
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="transition hover:text-slate-900" href="/#faq">
+                <Link className="transition hover:text-slate-900" href="/#faq">
                   Preguntas frecuentes
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="transition hover:text-slate-900" href="/#contacto">
+                <Link className="transition hover:text-slate-900" href="/#contacto">
                   Contacto
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

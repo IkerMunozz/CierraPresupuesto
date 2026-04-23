@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 type Analysis = {
@@ -106,7 +107,8 @@ function ScorePill({ score, competitiveness }: { score: number; competitiveness:
     return { bg: 'bg-amber-500', label: 'Baja' };
   }, [score]);
 
-  const compLabel = competitiveness === 'alta' ? 'Competitivo' : competitiveness === 'media' ? 'Equilibrado' : 'Poco competitivo';
+  const compLabel =
+    competitiveness === 'alta' ? 'Competitivo' : competitiveness === 'media' ? 'Equilibrado' : 'Poco competitivo';
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-slate-100 p-4">
@@ -147,8 +149,13 @@ export default function Results({
   return (
     <div className="space-y-6">
       {error ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700 shadow-soft">
-          {error}
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <p>{error}</p>
+          {error.includes('IA requiere') && (
+            <Link href="/subscription" className="mt-3 inline-block text-blue-600 hover:underline">
+              Mejorar a Pro →
+            </Link>
+          )}
         </div>
       ) : null}
 
@@ -224,4 +231,3 @@ export default function Results({
     </div>
   );
 }
-

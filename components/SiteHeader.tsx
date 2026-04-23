@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function MenuIcon() {
   return (
@@ -34,46 +35,64 @@ export default function SiteHeader() {
   const loading = status === 'loading';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<string>('Free');
+
+  useEffect(() => {
+    if (session?.user) {
+      fetch('/api/stripe/subscription')
+        .then(res => res.json())
+        .then(data => {
+          if (data.plan) {
+            const planName = data.plan.charAt(0).toUpperCase() + data.plan.slice(1);
+            setCurrentPlan(planName);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/95 backdrop-blur-lg shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-10">
-        <Link href="/" className="flex items-center gap-3 font-bold text-slate-900">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg">
-            <span className="text-lg font-bold">CP</span>
+        <Link href="/" className="flex items-center">
+          <div className="relative h-14 w-56">
+            <Image 
+              src="/logo.png" 
+              alt="VendeMás AI" 
+              fill
+              className="object-contain object-left"
+              priority
+            />
           </div>
-          <span className="hidden text-xl tracking-tight sm:block">CierraPresupuesto</span>
         </Link>
 
         {session?.user ? (
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-            <Link className="transition-colors hover:text-slate-900" href="/">
-              Panel
-            </Link>
-            <Link className="transition-colors hover:text-slate-900" href="/app">
-              Nuevo Presupuesto
+            <Link className="transition-colors hover:text-slate-900 font-bold" href="/">
+              Workspace
             </Link>
             <Link className="transition-colors hover:text-slate-900" href="/app/history">
-              Mis Presupuestos
+              Propuestas
             </Link>
             <Link className="transition-colors hover:text-slate-900" href="/app/clients">
-              Clientes
+              Leads
             </Link>
           </nav>
+
         ) : (
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-            <a className="transition-colors hover:text-slate-900" href="#features">
+            <Link className="transition-colors hover:text-slate-900" href="/#funcionalidades">
               Funcionalidades
-            </a>
-            <a className="transition-colors hover:text-slate-900" href="#how-it-works">
+            </Link>
+            <Link className="transition-colors hover:text-slate-900" href="/#como-funciona">
               Cómo funciona
-            </a>
-            <a className="transition-colors hover:text-slate-900" href="#pricing">
+            </Link>
+            <Link className="transition-colors hover:text-slate-900" href="/#pricing">
               Precios
-            </a>
-            <a className="transition-colors hover:text-slate-900" href="#faq">
+            </Link>
+            <Link className="transition-colors hover:text-slate-900" href="/#faq">
               FAQ
-            </a>
+            </Link>
           </nav>
         )}
 
@@ -90,7 +109,15 @@ export default function SiteHeader() {
                   <UserIcon />
                 </div>
                 <span className="hidden sm:block">{session.user.name || session.user.email}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`transition-transform ${profileOpen ? 'rotate-180' : ''}`}>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  className={`transition-transform ${profileOpen ? 'rotate-180' : ''}`}
+                >
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </button>
@@ -101,7 +128,7 @@ export default function SiteHeader() {
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Plan actual</p>
                     <p className="mt-1 flex items-center gap-2 text-sm font-bold text-blue-600">
                       <span className="h-2 w-2 rounded-full bg-blue-600" />
-                      Plan Free
+                      Plan {currentPlan}
                     </p>
                   </div>
                   <div className="py-1">
@@ -160,32 +187,53 @@ export default function SiteHeader() {
           <nav className="flex flex-col gap-4 px-4 py-6 text-sm font-medium text-slate-600">
             {session?.user ? (
               <>
-                <Link href="/" onClick={() => setMobileMenuOpen(false)}>Panel</Link>
-                <Link href="/app" onClick={() => setMobileMenuOpen(false)}>Nuevo Presupuesto</Link>
-                <Link href="/app/history" onClick={() => setMobileMenuOpen(false)}>Mis Presupuestos</Link>
-                <Link href="/app/clients" onClick={() => setMobileMenuOpen(false)}>Clientes</Link>
+                <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+                  Panel
+                </Link>
+                <Link href="/app" onClick={() => setMobileMenuOpen(false)}>
+                  Nuevo
+                </Link>
+                <Link href="/app/history" onClick={() => setMobileMenuOpen(false)}>
+                  Presupuestos
+                </Link>
+                <Link href="/app/clients" onClick={() => setMobileMenuOpen(false)}>
+                  Clientes
+                </Link>
                 <div className="my-2 h-px bg-slate-100" />
-                <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
-                  className="text-left text-red-600 font-bold"
-                >
+                <button onClick={() => signOut({ callbackUrl: '/' })} className="text-left text-red-600 font-bold">
                   Cerrar sesión
                 </button>
               </>
             ) : (
               <>
-                <a className="transition-colors hover:text-slate-900" href="#features" onClick={() => setMobileMenuOpen(false)}>
+                <Link
+                  className="transition-colors hover:text-slate-900"
+                  href="/#funcionalidades"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Funcionalidades
-                </a>
-                <a className="transition-colors hover:text-slate-900" href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>
+                </Link>
+                <Link
+                  className="transition-colors hover:text-slate-900"
+                  href="/#como-funciona"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Cómo funciona
-                </a>
-                <a className="transition-colors hover:text-slate-900" href="#pricing" onClick={() => setMobileMenuOpen(false)}>
+                </Link>
+                <Link
+                  className="transition-colors hover:text-slate-900"
+                  href="/#pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Precios
-                </a>
-                <a className="transition-colors hover:text-slate-900" href="#faq" onClick={() => setMobileMenuOpen(false)}>
+                </Link>
+                <Link
+                  className="transition-colors hover:text-slate-900"
+                  href="/#faq"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   FAQ
-                </a>
+                </Link>
                 <div className="my-2 h-px bg-slate-200" />
                 <Link
                   href="/register"

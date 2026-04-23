@@ -15,7 +15,9 @@ const hasEmail = () =>
 
 const DrizzleAdapter: any = {
   async createUser(user: any) {
-    const [newUser] = await db.insert(users).values(user).returning();
+    const id = crypto.randomUUID();
+    console.log('📦 DrizzleAdapter: Creating user', { id, email: user.email });
+    const [newUser] = await db.insert(users).values({ ...user, id }).returning();
     return newUser;
   },
   async getUser(id: string) {
@@ -27,6 +29,7 @@ const DrizzleAdapter: any = {
     return user || null;
   },
   async getUserByAccount({ providerAccountId, provider }: any) {
+    console.log('🔍 DrizzleAdapter: getUserByAccount', { provider, providerAccountId });
     const [account] = await db
       .select()
       .from(accounts)
@@ -43,7 +46,9 @@ const DrizzleAdapter: any = {
     await db.delete(users).where(eq(users.id, userId));
   },
   async linkAccount(account: any) {
-    await db.insert(accounts).values(account);
+    const id = crypto.randomUUID();
+    console.log('🔗 DrizzleAdapter: linkAccount', { id, provider: account.provider, userId: account.userId });
+    await db.insert(accounts).values({ ...account, id });
   },
   async unlinkAccount({ providerAccountId, provider }: any) {
     await db
@@ -51,7 +56,9 @@ const DrizzleAdapter: any = {
       .where(and(eq(accounts.provider, provider), eq(accounts.providerAccountId, providerAccountId)));
   },
   async createSession(session: any) {
-    const [newSession] = await db.insert(sessions).values(session).returning();
+    const id = crypto.randomUUID();
+    console.log('🎫 DrizzleAdapter: createSession', { id, userId: session.userId });
+    const [newSession] = await db.insert(sessions).values({ ...session, id }).returning();
     return newSession;
   },
   async getSessionAndUser(sessionToken: string) {
@@ -156,14 +163,29 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  session: { strategy: 'jwt' },
+  session: { 
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   pages: {
     signIn: '/login',
+    error: '/login', // Redirigir errores aquí también
   },
   callbacks: {
+    async jwt({ token, user, account, profile }) {
+      if (user) {
+        token.id = user.id;
+        console.log('🔑 JWT Callback: User logged in', { id: user.id, email: user.email });
+      }
+      if (account) {
+        token.accessToken = account.access_token;
+      }
+      return token;
+    },
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).id = token.sub;
+        (session.user as any).id = token.id;
+        console.log('👤 Session Callback: Session created for', { id: token.id });
       }
       return session;
     },

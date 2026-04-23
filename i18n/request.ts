@@ -1,13 +1,16 @@
-import { notFound } from 'next/navigation';
 import { getRequestConfig } from 'next-intl/server';
 
+// Load translations directly from ES file
+const esMessages = await import('./locales/es.json').then((m) => m.default);
+
 export default getRequestConfig(async ({ locale }) => {
-  if (!locale || !['en', 'es'].includes(locale)) {
+  // Only Spanish supported
+  if (!locale || locale !== 'es') {
     locale = 'es';
   }
 
   return {
     locale,
-    messages: (await import(`./locales/${locale}.json`)).default,
+    messages: esMessages,
   };
 });

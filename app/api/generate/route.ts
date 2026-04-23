@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { quotes } from '@/lib/db/schema';
 import { callOpenAIStream, moderateContent } from '@/lib/openai';
+import { getUserPlan, PLANS } from '@/lib/plans';
 
 type GenerateResponse = {
   quote: string;
@@ -24,6 +25,14 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ message: 'No autorizado.' }, { status: 401 });
+    }
+
+    // Check plan - AI is only for Pro/Business plans
+    const plan = await getUserPlan(session.user.id);
+    const hasAI = PLANS[plan].features.ai;
+
+    if (!hasAI) {
+      return NextResponse.json({ message: 'La IA requiere el plan Pro o Business.', upgrade: true }, { status: 403 });
     }
 
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
