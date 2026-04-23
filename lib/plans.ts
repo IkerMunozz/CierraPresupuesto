@@ -6,7 +6,7 @@ export { PLANS, type PlanKey } from './plans-config';
 import { PLANS, PlanKey } from './plans-config';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2026-03-25.dahlia',
 });
 
 export async function getUserSubscription(userId: string) {
@@ -116,8 +116,11 @@ export async function handleStripeWebhook(body: string, signature: string) {
       if (!userId) break;
 
       const subscriptionId = session.subscription as string;
-      const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      const retrieved = await stripe.subscriptions.retrieve(subscriptionId);
+      const sub: Stripe.Subscription = (retrieved as any).data ?? (retrieved as any);
       const priceId = sub.items.data[0]?.price.id;
+      const currentPeriodStart = (sub as any).current_period_start ?? (sub as any).currentPeriodStart;
+      const currentPeriodEnd = (sub as any).current_period_end ?? (sub as any).currentPeriodEnd;
 
       let plan: PlanKey = 'pro';
       if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID) plan = 'business';
@@ -132,16 +135,16 @@ export async function handleStripeWebhook(body: string, signature: string) {
           stripeSubscriptionId: subscriptionId,
           plan,
           status: 'active',
-          currentPeriodStart: new Date(sub.current_period_start * 1000),
-          currentPeriodEnd: new Date(sub.current_period_end * 1000),
+          currentPeriodStart: typeof currentPeriodStart === 'number' ? new Date(currentPeriodStart * 1000) : undefined,
+          currentPeriodEnd: typeof currentPeriodEnd === 'number' ? new Date(currentPeriodEnd * 1000) : undefined,
         })
         .onConflictDoUpdate({
           target: subscriptions.id,
           set: {
             plan,
             status: 'active',
-            currentPeriodStart: new Date(sub.current_period_start * 1000),
-            currentPeriodEnd: new Date(sub.current_period_end * 1000),
+            currentPeriodStart: typeof currentPeriodStart === 'number' ? new Date(currentPeriodStart * 1000) : undefined,
+            currentPeriodEnd: typeof currentPeriodEnd === 'number' ? new Date(currentPeriodEnd * 1000) : undefined,
           },
         });
       break;
@@ -149,13 +152,16 @@ export async function handleStripeWebhook(body: string, signature: string) {
 
     case 'customer.subscription.updated': {
       const sub = event.data.object as Stripe.Subscription;
+      const currentPeriodStart = (sub as any).current_period_start ?? (sub as any).currentPeriodStart;
+      const currentPeriodEnd = (sub as any).current_period_end ?? (sub as any).currentPeriodEnd;
+      const cancelAtPeriodEnd = (sub as any).cancel_at_period_end ?? (sub as any).cancelAtPeriodEnd;
       await db
         .update(subscriptions)
         .set({
           status: sub.status === 'active' ? 'active' : sub.status === 'past_due' ? 'past_due' : 'canceled',
-          currentPeriodStart: new Date(sub.current_period_start * 1000),
-          currentPeriodEnd: new Date(sub.current_period_end * 1000),
-          cancelAtPeriodEnd: sub.cancel_at_period_end ? 1 : 0,
+          currentPeriodStart: typeof currentPeriodStart === 'number' ? new Date(currentPeriodStart * 1000) : undefined,
+          currentPeriodEnd: typeof currentPeriodEnd === 'number' ? new Date(currentPeriodEnd * 1000) : undefined,
+          cancelAtPeriodEnd: cancelAtPeriodEnd ? 1 : 0,
         })
         .where(eq(subscriptions.stripeSubscriptionId, sub.id));
       break;

@@ -8,7 +8,16 @@ import { users, accounts, sessions, verificationTokens } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
-const hasGoogle = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+const hasGoogle = () => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  console.log('🔍 Google OAuth check:', { 
+    hasClientId: !!clientId, 
+    hasClientSecret: !!clientSecret,
+    clientIdPrefix: clientId?.substring(0, 10) + '...' 
+  });
+  return Boolean(clientId && clientSecret);
+};
 const hasEmail = () =>
   Boolean(process.env.EMAIL_SERVER && process.env.EMAIL_FROM) ||
   Boolean(process.env.EMAIL_SERVER_HOST && process.env.EMAIL_SERVER_USER && process.env.EMAIL_SERVER_PASSWORD && process.env.EMAIL_FROM);
@@ -97,6 +106,7 @@ const DrizzleAdapter: any = {
 
 export const authOptions: NextAuthOptions = {
   adapter: DrizzleAdapter,
+  debug: process.env.NODE_ENV === 'development',
   providers: [
     ...(hasGoogle()
       ? [

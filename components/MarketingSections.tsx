@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import LogosMarquee from '@/components/LogosMarquee';
+import PricingSection from '@/components/PricingSection';
 
 function Feature({ title, description }: { title: string; description: string }) {
   return (
@@ -174,27 +175,7 @@ export default function MarketingSections() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-sm font-semibold text-slate-900">Comparativa rápida</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-3xl bg-white p-4">
-                    <p className="text-xs font-semibold text-slate-500">Excel / Word</p>
-                    <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                      <li>× Copiar/pegar</li>
-                      <li>× Sin análisis</li>
-                      <li>× Cierre inconsistente</li>
-                    </ul>
-                  </div>
-                  <div className="rounded-3xl bg-white p-4">
-                    <p className="text-xs font-semibold text-slate-500">CierraPresupuesto</p>
-                    <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                      <li>✓ Propuesta comercial</li>
-                      <li>✓ Score + riesgos</li>
-                      <li>✓ Versión mejorada</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              
             </div>
           </div>
         </div>
@@ -230,104 +211,7 @@ export default function MarketingSections() {
       </section>
 
       <section id="pricing" className="py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-slate-900">Precios simples y transparentes</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              Elige el plan que mejor se adapte a tus necesidades. Todos incluyen acceso completo a la plataforma.
-            </p>
-          </div>
-          <div className="mt-8 grid gap-6 lg:grid-cols-3">
-            {[
-              {
-                name: 'Gratis',
-                price: '0€',
-                period: 'para siempre',
-                description: 'Perfecto para probar la herramienta',
-                features: [
-                  'Hasta 5 presupuestos al mes',
-                  'Análisis básico de conversión',
-                  'Historial limitado',
-                  'Soporte por email'
-                ],
-                cta: 'Comenzar gratis',
-                popular: false
-              },
-              {
-                name: 'Profesional',
-                price: '19€',
-                period: 'al mes',
-                description: 'Para autónomos y pequeñas empresas',
-                features: [
-                  'Presupuestos ilimitados',
-                  'IA completa con OpenAI',
-                  'Análisis detallado y score',
-                  'Versión mejorada automática',
-                  'Exportar a PDF',
-                  'Historial completo',
-                  'Soporte prioritario'
-                ],
-                cta: 'Empezar prueba gratuita',
-                popular: true
-              },
-              {
-                name: 'Empresa',
-                price: '49€',
-                period: 'al mes',
-                description: 'Para equipos y grandes proyectos',
-                features: [
-                  'Todo lo del plan Profesional',
-                  'Hasta 5 usuarios',
-                  'Plantillas personalizadas',
-                  'API para integraciones',
-                  'Soporte VIP 24/7',
-                  'Onboarding dedicado'
-                ],
-                cta: 'Contactar ventas',
-                popular: false
-              }
-            ].map((plan, i) => (
-              <div key={i} className={`relative rounded-3xl border bg-white p-8 shadow-soft ${plan.popular ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-slate-200'}`}>
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="rounded-full bg-brand-600 px-4 py-1 text-xs font-semibold text-white">Más popular</span>
-                  </div>
-                )}
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold text-slate-900">{plan.name}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{plan.description}</p>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-slate-900">{plan.price}</span>
-                    <span className="text-sm text-slate-600">/{plan.period}</span>
-                  </div>
-                </div>
-                <ul className="mt-8 space-y-3">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-start gap-3 text-sm text-slate-700">
-                      <span className="mt-0.5 inline-flex h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={plan.cta === 'Contactar ventas' ? '/contact' : '/register'}
-                  className={`mt-8 block w-full rounded-2xl py-3 text-center text-sm font-semibold transition ${
-                    plan.popular
-                      ? 'bg-brand-600 text-white hover:bg-brand-700'
-                      : 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 text-center">
-            <p className="text-sm text-slate-600">
-              Todos los planes incluyen 14 días de prueba gratuita. Sin compromiso, cancela cuando quieras.
-            </p>
-          </div>
-        </div>
+        <PricingSection />
       </section>
 
       <section id="faq" className="py-14">

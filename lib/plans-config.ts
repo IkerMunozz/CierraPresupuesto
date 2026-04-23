@@ -3,6 +3,7 @@ export const PLANS = {
     name: 'Free',
     description: 'Para probar y empezar sin compromiso.',
     price: 0,
+    priceId: undefined,
     features: {
       ai: false,
       maxQuotes: 3,

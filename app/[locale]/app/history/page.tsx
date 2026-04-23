@@ -8,6 +8,11 @@ import { eq, desc } from 'drizzle-orm';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 
+type QuoteRow = {
+  quotes: typeof quotes.$inferSelect;
+  clients: typeof clients.$inferSelect | null;
+};
+
 export default async function HistoryPage() {
   const session = await getServerSession(authOptions);
 
@@ -15,7 +20,7 @@ export default async function HistoryPage() {
     redirect('/login');
   }
 
-  let userQuotes = [];
+  let userQuotes: QuoteRow[] = [];
 
   try {
     userQuotes = await db.select().from(quotes).leftJoin(clients, eq(quotes.clientId, clients.id)).where(eq(quotes.userId, session.user.id)).orderBy(desc(quotes.createdAt));

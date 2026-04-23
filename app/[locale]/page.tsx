@@ -6,11 +6,16 @@ import PlanBadge from '@/components/PlanBadge';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { quotes, clients, companies } from '@/lib/db/schema';
+import { quotes, clients } from '@/lib/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 
+type RecentQuoteRow = {
+  quotes: typeof quotes.$inferSelect;
+  clients: typeof clients.$inferSelect | null;
+};
+
 async function Dashboard({ userId }: { userId: string }) {
-  let recentQuotes = [];
+  let recentQuotes: RecentQuoteRow[] = [];
   let stats = { total: 0, clients: 0, thisMonth: 0, accepted: 0 };
 
   try {

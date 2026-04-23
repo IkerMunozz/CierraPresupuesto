@@ -8,6 +8,8 @@ import { eq } from 'drizzle-orm';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 
+type Client = typeof clients.$inferSelect;
+
 export default async function ClientsPage() {
   const session = await getServerSession(authOptions);
 
@@ -15,7 +17,7 @@ export default async function ClientsPage() {
     redirect('/login');
   }
 
-  let userClients = [];
+  let userClients: Client[] = [];
 
   try {
     userClients = await db.query.clients.findMany({
@@ -52,7 +54,7 @@ export default async function ClientsPage() {
                   <h3 className="text-lg font-semibold text-slate-900">{client.name}</h3>
                   <p className="text-sm text-slate-600 mt-1">{client.email}</p>
                   {client.phone && <p className="text-sm text-slate-600">{client.phone}</p>}
-                  {client.company && <p className="text-sm text-slate-600">{client.company}</p>}
+                  {client.industry && <p className="text-sm text-slate-600">{client.industry}</p>}
                   <div className="mt-4 flex gap-2">
                     <Link
                       href={`/app/clients/${client.id}/edit`}

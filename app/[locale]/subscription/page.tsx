@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import { PLANS, PlanKey } from '@/lib/plans-config';
+import { useSubscription } from '@/lib/hooks/useSubscription';
+import { useSearchParams } from 'next/navigation';
+import PlanComparisonTable from '@/components/PlanComparisonTable';
 
 const PRICES_DISPLAY: Record<PlanKey, string> = {
   free: '0',
@@ -124,20 +127,26 @@ function PlanCard({
 export default function SubscriptionPage() {
   const { data: session, status } = useSession();
   const [upgradingPlan, setUpgradingPlan] = useState<PlanKey | null>(null);
-  const [currentPlan, setCurrentPlan] = useState<PlanKey>('free');
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const { plan: currentPlan, label: currentPlanLabel, subscription, refresh } = useSubscription();
+  const searchParams = useSearchParams();
+  const paymentSuccess = searchParams.get('success') === 'true';
+  const paymentCanceled = searchParams.get('canceled') === 'true';
+
+  const statusLabel = useMemo(() => {
+    if (!subscription?.status) return null;
+    if (subscription.status === 'active') return { text: 'Activa', tone: 'green' as const };
+    if (subscription.status === 'past_due') return { text: 'Pago pendiente', tone: 'amber' as const };
+    if (subscription.status === 'trialing') return { text: 'En prueba', tone: 'blue' as const };
+    if (subscription.status === 'canceled') return { text: 'Cancelada', tone: 'slate' as const };
+    return { text: subscription.status, tone: 'slate' as const };
+  }, [subscription?.status]);
 
   useEffect(() => {
-    if (session?.user) {
-      fetch('/api/stripe/subscription')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.plan) {
-            setCurrentPlan(data.plan as PlanKey);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [session]);
+    if (!paymentSuccess) return;
+    const t = setTimeout(() => refresh(), 1200);
+    return () => clearTimeout(t);
+  }, [paymentSuccess, refresh]);
 
   if (status === 'loading') {
     return (
@@ -175,12 +184,55 @@ export default function SubscriptionPage() {
     }
   };
 
+  const handleOpenBillingPortal = async () => {
+    setOpeningPortal(true);
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' });
+      const data = await res.json().catch(() => null);
+      if (data?.url) window.location.href = data.url;
+      else alert(data?.error || 'No se pudo abrir el portal de facturación');
+    } catch {
+      alert('No se pudo abrir el portal de facturación');
+    } finally {
+      setOpeningPortal(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <SiteHeader />
       
       <main className="flex-grow px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
+          {(paymentSuccess || paymentCanceled) && (
+            <div
+              className={`mb-8 rounded-3xl border p-5 sm:p-6 ${
+                paymentSuccess ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'
+              }`}
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-extrabold tracking-tight text-slate-900">
+                    {paymentSuccess ? 'Pago confirmado' : 'Pago cancelado'}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-700">
+                    {paymentSuccess
+                      ? `Tu suscripción se actualizará en unos segundos. Plan actual: ${currentPlanLabel}.`
+                      : 'No se ha realizado ningún cargo. Puedes intentarlo de nuevo cuando quieras.'}
+                  </p>
+                </div>
+                {paymentSuccess && (
+                  <button
+                    onClick={() => refresh()}
+                    className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
+                  >
+                    Actualizar estado
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mb-16 text-center">
             <h2 className="text-sm font-bold uppercase tracking-widest text-blue-600">Precios</h2>
             <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
@@ -189,6 +241,41 @@ export default function SubscriptionPage() {
             <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
               Escoge el plan que mejor se adapte a tu volumen de trabajo. Todos los planes incluyen actualizaciones gratuitas.
             </p>
+            <div className="mx-auto mt-6 inline-flex flex-wrap items-center justify-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+              <span className="text-slate-500">Tu plan:</span>
+              <span className="font-extrabold text-slate-900">{currentPlanLabel}</span>
+              {statusLabel && (
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-extrabold ${
+                    statusLabel.tone === 'green'
+                      ? 'bg-green-100 text-green-700'
+                      : statusLabel.tone === 'amber'
+                        ? 'bg-amber-100 text-amber-700'
+                        : statusLabel.tone === 'blue'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {statusLabel.text}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <button
+                onClick={handleOpenBillingPortal}
+                disabled={openingPortal}
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+              >
+                {openingPortal ? 'Abriendo…' : 'Gestionar facturación'}
+              </button>
+              <button
+                onClick={() => refresh()}
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800"
+              >
+                Actualizar plan
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-8 md:grid-cols-3">
@@ -211,6 +298,8 @@ export default function SubscriptionPage() {
               loading={upgradingPlan === 'business'}
             />
           </div>
+
+          <PlanComparisonTable currentPlan={currentPlan} />
 
           <div className="mt-16 rounded-[2.5rem] border border-slate-200 bg-white p-8 text-center sm:p-12">
             <h3 className="text-xl font-bold text-slate-900">¿Necesitas algo a medida?</h3>
