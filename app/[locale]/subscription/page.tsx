@@ -39,15 +39,34 @@ function PlanCard({
   const isCurrent = currentPlan === planKey;
   const isPopular = planKey === 'pro';
 
+  // Restriction logic: Allow all upgrades except for current plan or free plan button
+  const isDisabled = 
+    loading || 
+    planKey === 'free';
+
+  const buttonText = useMemo(() => {
+    if (loading) return 'Procesando...';
+    if (isCurrent) return 'Tu plan actual';
+    if (planKey === 'free') return 'Plan Inicial';
+    return `Mejorar a ${plan.name}`;
+  }, [loading, isCurrent, planKey, plan.name]);
+
   return (
     <div
       className={`relative flex flex-col rounded-3xl border p-8 transition-all duration-300 ${
-        isPopular
+        isCurrent ? 'ring-2 ring-blue-600 border-blue-600' : ''
+      } ${
+        isPopular && !isCurrent
           ? 'border-blue-600 bg-white shadow-xl shadow-blue-100 ring-1 ring-blue-600'
           : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg'
       }`}
     >
-      {isPopular && (
+      {isCurrent && (
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-4 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-lg">
+          Plan Contratado
+        </div>
+      )}
+      {isPopular && !isCurrent && (
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-4 py-1 text-xs font-bold uppercase tracking-wider text-white">
           Más Popular
         </div>
@@ -103,23 +122,19 @@ function PlanCard({
         </li>
       </ul>
 
-      {isCurrent ? (
-        <div className="w-full rounded-2xl bg-slate-100 py-3 text-center text-sm font-bold text-slate-600">
-          Tu plan actual
-        </div>
-      ) : (
-        <button
-          onClick={() => onUpgrade(planKey)}
-          disabled={loading || planKey === 'free'}
-          className={`w-full rounded-2xl py-3 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50 ${
-            isPopular
+      <button
+        onClick={() => onUpgrade(planKey)}
+        disabled={isDisabled || isCurrent}
+        className={`w-full rounded-2xl py-3 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50 ${
+          isCurrent
+            ? 'bg-slate-100 text-slate-600 cursor-default'
+            : isPopular
               ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-200'
               : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-          }`}
-        >
-          {loading ? 'Procesando...' : planKey === 'free' ? 'Plan Inicial' : `Mejorar a ${plan.name}`}
-        </button>
-      )}
+        }`}
+      >
+        {buttonText}
+      </button>
     </div>
   );
 }
