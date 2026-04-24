@@ -79,16 +79,26 @@ function Step1Company({ onNext, data, updateData }: Omit<StepProps, 'onPrev'>) {
 
   const handleAddCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/companies', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newCompany),
-    });
-    if (res.ok) {
-      const created = await res.json();
-      setCompanies([...companies, created]);
-      updateData({ companyId: created.id });
-      setIsModalOpen(false);
+    console.log('Sending new company data:', newCompany);
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCompany),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setCompanies([...companies, created]);
+        updateData({ companyId: created.id });
+        setIsModalOpen(false);
+      } else {
+        const errorData = await res.json();
+        console.error('Error response from API:', errorData);
+        alert(`Error: ${errorData.message || 'No se pudo crear la empresa'}`);
+      }
+    } catch (error) {
+      console.error('Network error creating company:', error);
+      alert('Error de red al crear la empresa');
     }
   };
 
@@ -200,16 +210,26 @@ function Step2Client({ onNext, onPrev, data, updateData }: StepProps) {
 
   const handleAddClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/clients', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newClient),
-    });
-    if (res.ok) {
-      const created = await res.json();
-      setClients([...clients, created]);
-      updateData({ clientId: created.id });
-      setIsModalOpen(false);
+    console.log('Sending new client data:', newClient);
+    try {
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newClient),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setClients([...clients, created]);
+        updateData({ clientId: created.id });
+        setIsModalOpen(false);
+      } else {
+        const errorData = await res.json();
+        console.error('Error response from API:', errorData);
+        alert(`Error: ${errorData.message || 'No se pudo crear el cliente'}`);
+      }
+    } catch (error) {
+      console.error('Network error creating client:', error);
+      alert('Error de red al crear el cliente');
     }
   };
 
@@ -417,6 +437,7 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
   const handleCreate = async () => {
     setIsSaving(true);
     const fullData = { ...data, lines };
+    console.log('Creating professional quote with data:', fullData);
     try {
       const res = await fetch('/api/quotes/professional', {
         method: 'POST',
@@ -426,9 +447,14 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
       if (res.ok) {
         const quote = await res.json();
         router.push(`/app/quotes/${quote.id}`);
+      } else {
+        const errorData = await res.json();
+        console.error('Error creating quote:', errorData);
+        alert(`Error: ${errorData.message || 'No se pudo crear el presupuesto'}`);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Network error creating quote:', e);
+      alert('Error de red al crear el presupuesto');
     } finally {
       setIsSaving(false);
     }

@@ -49,7 +49,8 @@ export default function SiteHeader() {
 
         {session?.user ? (
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-            <Link href="/app" className="hover:text-slate-900">Dashboard</Link>
+            <Link href="/" className="hover:text-slate-900">Dashboard</Link>
+            <Link href="/app" className="hover:text-slate-900">Nuevo presupuesto</Link>
             <Link href="/app/history" className="hover:text-slate-900">Historial</Link>
             <Link href="/app/clients" className="hover:text-slate-900">Clientes</Link>
           </nav>
@@ -69,11 +70,65 @@ export default function SiteHeader() {
               <button
                 type="button"
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <UserIcon />
                 <span>{session.user.name || 'Usuario'}</span>
+                <svg
+                  className={`h-4 w-4 text-slate-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
+
+              {profileOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setProfileOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+                    <div className="px-3 py-2 mb-1 border-b border-slate-100">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cuenta</p>
+                      <p className="text-sm font-medium text-slate-900 truncate">{session.user.email}</p>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                    >
+                      <UserIcon />
+                      <span>Mi Perfil</span>
+                    </Link>
+                    <Link
+                      href="/subscription"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                      </svg>
+                      <span>Suscripción</span>
+                    </Link>
+                    <div className="my-1 border-t border-slate-100" />
+                    <button
+                      onClick={() => {
+                        setProfileOpen(false);
+                        signOut();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                      </svg>
+                      <span>Cerrar sesión</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -101,12 +156,22 @@ export default function SiteHeader() {
           <nav className="flex flex-col gap-4 px-4 py-6 text-sm font-medium text-slate-600">
             {session?.user ? (
               <>
-                <Link href="/app" className="hover:text-slate-900">Dashboard</Link>
-                <Link href="/app/history" className="hover:text-slate-900">Historial</Link>
-                <Link href="/app/clients" className="hover:text-slate-900">Clientes</Link>
+                <div className="px-3 py-2 border-b border-slate-100 mb-2">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Navegación</p>
+                </div>
+                <Link href="/" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Dashboard</Link>
+                <Link href="/app" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Nuevo presupuesto</Link>
+                <Link href="/app/history" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Historial</Link>
+                <Link href="/app/clients" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Clientes</Link>
+                
+                <div className="px-3 py-2 border-b border-slate-100 my-2">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Usuario</p>
+                </div>
+                <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Mi Perfil</Link>
+                <Link href="/subscription" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Suscripción</Link>
                 <button
                   onClick={() => signOut()}
-                  className="text-left hover:text-slate-900"
+                  className="px-3 py-1 text-left text-red-600 hover:text-red-700 font-semibold mt-2"
                 >
                   Cerrar sesión
                 </button>

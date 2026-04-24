@@ -80,7 +80,6 @@ export const clients = pgTable('clients', {
   phone: text('phone'),
   address: text('address'),
   taxId: text('tax_id'),
-  industry: text('industry'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

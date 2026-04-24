@@ -1,19 +1,19 @@
 import { z } from 'zod';
 
 export const CompanySchema = z.object({
-  name: z.string().min(1, 'El nombre es obligatorio'),
-  phone: z.string().optional(),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  address: z.string().optional(),
-  footerInfo: z.string().optional(),
+  name: z.string().min(1, 'El nombre es obligatorio').trim(),
+  phone: z.string().trim().optional().or(z.literal('')).or(z.null()),
+  email: z.string().trim().email('Email inválido').optional().or(z.literal('')).or(z.null()),
+  address: z.string().trim().optional().or(z.literal('')).or(z.null()),
+  footerInfo: z.string().trim().optional().or(z.literal('')).or(z.null()),
 });
 
 export const ClientSchema = z.object({
-  name: z.string().min(1, 'El nombre es obligatorio'),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  taxId: z.string().optional(),
+  name: z.string().min(1, 'El nombre es obligatorio').trim(),
+  email: z.string().trim().email('Email inválido').optional().or(z.literal('')).or(z.null()),
+  phone: z.string().trim().optional().or(z.literal('')).or(z.null()),
+  address: z.string().trim().optional().or(z.literal('')).or(z.null()),
+  taxId: z.string().trim().optional().or(z.literal('')).or(z.null()),
 });
 
 export const ConceptSchema = z.object({

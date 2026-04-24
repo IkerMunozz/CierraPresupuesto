@@ -16,6 +16,7 @@ export async function GET() {
       status: subscription.status,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 });
+    console.error('Error fetching subscription:', error);
+    return new Response(JSON.stringify({ error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error' }), { status: 500 });
   }
 }
