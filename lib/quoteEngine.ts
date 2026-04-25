@@ -1,4 +1,5 @@
 import { callOpenAI, hasOpenAIKey } from '@/lib/openai';
+import { callGemini, hasGeminiKey } from '@/lib/gemini';
 
 export type QuoteInput = {
   serviceType: string;
@@ -19,10 +20,12 @@ const clampScore = (value: number) => Math.max(0, Math.min(100, Math.round(value
 
 const safeParseJson = <T,>(raw: string): T | null => {
   const trimmed = raw.trim();
-  const start = trimmed.indexOf('{');
-  const end = trimmed.lastIndexOf('}');
+  // Remove markdown code blocks if present
+  const cleaned = trimmed.replace(/^```json\s*|\s*```$/g, '');
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
   if (start === -1 || end === -1 || end <= start) return null;
-  const candidate = trimmed.slice(start, end + 1);
+  const candidate = cleaned.slice(start, end + 1);
   try {
     return JSON.parse(candidate) as T;
   } catch {
@@ -98,7 +101,8 @@ const mockImprovedQuote = (input: QuoteInput) => {
 };
 
 export async function generateQuote(input: QuoteInput): Promise<string> {
-  if (!hasOpenAIKey()) return mockQuote(input);
+  const useGemini = hasGeminiKey();
+  if (!useGemini && !hasOpenAIKey()) return mockQuote(input);
 
   const prompt = [
     `Eres un experto en ventas B2B/B2C para autónomos. Genera un presupuesto/propuesta comercial en español, profesional, orientada a cierre.`,
@@ -114,15 +118,21 @@ export async function generateQuote(input: QuoteInput): Promise<string> {
     `Incluye: asunto, breve intro, valor/beneficios, entregables (lista), condiciones (muy breves) y CTA final con urgencia suave.`,
   ].join('\n');
 
+  if (useGemini) {
+    return await callGemini(prompt, 'Eres un experto en ventas B2B/B2C para autónomos.');
+  }
+
   const text = await callOpenAI(prompt);
   return text || mockQuote(input);
 }
 
 export async function analyzeQuote(quote: string): Promise<QuoteAnalysis> {
-  if (!hasOpenAIKey()) return mockAnalysis(quote);
+  const useGemini = hasGeminiKey();
+  if (!useGemini && !hasOpenAIKey()) return mockAnalysis(quote);
 
+  const systemInstruction = 'Actúa como un director comercial experto en análisis de propuestas.';
   const prompt = [
-    `Actúa como un director comercial. Analiza el presupuesto y devuelve SOLO JSON válido.`,
+    `Analiza el siguiente presupuesto y devuelve SOLO JSON válido.`,
     `Estructura EXACTA:`,
     `{`,
     `  "score": number,`,
@@ -141,7 +151,25 @@ export async function analyzeQuote(quote: string): Promise<QuoteAnalysis> {
     quote,
   ].join('\n');
 
-  const raw = await callOpenAI(prompt);
+  let raw: string;
+  try {
+    if (useGemini) {
+      raw = await callGemini(prompt, systemInstruction);
+    } else {
+      raw = await callOpenAI(prompt);
+    }
+  } catch (error: any) {
+    console.error('Error en analyzeQuote:', error);
+    // Si hay error de API, devolver análisis mock con información del error
+    return {
+      ...mockAnalysis(quote),
+      feedback: [
+        ...mockAnalysis(quote).feedback,
+        `Error de API: ${error.message || 'Error desconocido'}`
+      ]
+    };
+  }
+
   const parsed = safeParseJson<QuoteAnalysis>(raw);
   if (!parsed) return mockAnalysis(quote);
 
@@ -159,7 +187,8 @@ export async function analyzeQuote(quote: string): Promise<QuoteAnalysis> {
 }
 
 export async function improveQuote(quote: string, analysis?: QuoteAnalysis): Promise<string> {
-  if (!hasOpenAIKey()) {
+  const useGemini = hasGeminiKey();
+  if (!useGemini && !hasOpenAIKey()) {
     // Best-effort: if we don't have the original input, we still deliver a strong rewrite.
     return [
       `Versión optimizada (orientada a cierre):`,
@@ -184,12 +213,17 @@ export async function improveQuote(quote: string, analysis?: QuoteAnalysis): Pro
     `Reescribe el presupuesto para maximizar conversión sin sonar agresivo. Español neutro.`,
     `Mantén estructura profesional (asunto, valor, entregables, condiciones breves, CTA).`,
     `No inventes datos no proporcionados (si faltan plazos o condiciones, ofrece opciones).`,
+    `Sé conciso pero completo. Máximo 300 palabras.`,
     ``,
     guidance,
     ``,
     `PRESUPUESTO ORIGINAL:`,
     quote,
   ].join('\n');
+
+  if (useGemini) {
+    return await callGemini(prompt, 'Eres un experto en persuasión y copy de ventas.');
+  }
 
   const text = await callOpenAI(prompt);
   return text || quote;

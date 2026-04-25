@@ -14,6 +14,7 @@ export type GenerateResult = {
   quote: string;
   analysis: Analysis;
   improvedQuote: string;
+  isFree?: boolean;
 };
 
 type CardProps = {
@@ -146,6 +147,8 @@ export default function Results({
     }
   };
 
+  const isFree = result?.isFree;
+
   return (
     <div className="space-y-6">
       {error ? (
@@ -175,13 +178,13 @@ export default function Results({
         loading={loading}
         empty="El análisis aparecerá aquí cuando generes un presupuesto."
         onCopy={
-          result
+          result && isFree === false && result.analysis.score > 0
             ? () =>
                 copy(
                   'analysis',
                   [
                     `Score: ${result.analysis.score}`,
-                    `Competitividad: ${result.analysis.competitiveness}`,
+                    `Competitividad: ${result.analysis.competitividad}`,
                     ``,
                     `Feedback:`,
                     ...result.analysis.feedback.map((x) => `- ${x}`),
@@ -195,28 +198,62 @@ export default function Results({
         copied={copiedKey === 'analysis'}
       >
         {result ? (
-          <div className="space-y-4">
-            <ScorePill score={result.analysis.score} competitiveness={result.analysis.competitiveness} />
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                <h3 className="text-sm font-semibold text-slate-900">Feedback</h3>
-                <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-600">
-                  {result.analysis.feedback.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
+          isFree ? (
+            <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center">
+              <div className="rounded-2xl bg-brand-50 p-3">
+                <svg className="h-8 w-8 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
               </div>
-              <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                <h3 className="text-sm font-semibold text-slate-900">Riesgos</h3>
-                <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-600">
-                  {result.analysis.risks.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
+              <div className="max-w-xs space-y-2">
+                <h3 className="font-semibold text-slate-900">Análisis exclusivo PRO</h3>
+                <p className="text-sm text-slate-600">
+                  El análisis detallado con IA y score de conversión está disponible solo en los planes PRO y BUSINESS.
+                </p>
+                <Link
+                  href="/subscription"
+                  className="mt-4 inline-flex items-center justify-center rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+                >
+                  Mejorar ahora
+                </Link>
               </div>
             </div>
+          ) : result.analysis.score > 0 ? (
+            <div className="space-y-4">
+              <ScorePill score={result.analysis.score} competitiveness={result.analysis.competitiveness} />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Feedback</h3>
+                  <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-600">
+                    {result.analysis.feedback.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Riesgos</h3>
+                  <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-600">
+                    {result.analysis.risks.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center">
+              <p className="max-w-xs text-sm text-slate-600">
+                El análisis de IA no está disponible para este presupuesto.
+              </p>
+            </div>
+          )
+        ) : (
+          <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center">
+            <p className="max-w-xs text-sm text-slate-600">
+              El análisis aparecerá aquí cuando generes un presupuesto.
+            </p>
           </div>
-        ) : null}
+        )}
       </Card>
 
       <Card
@@ -224,10 +261,18 @@ export default function Results({
         subtitle="Reescritura optimizada para aumentar conversión."
         loading={loading}
         empty="La versión mejorada se mostrará aquí."
-        value={result?.improvedQuote}
-        onCopy={result?.improvedQuote ? () => copy('improved', result.improvedQuote) : undefined}
+        value={isFree ? undefined : result?.improvedQuote}
+        onCopy={result?.improvedQuote && !isFree ? () => copy('improved', result.improvedQuote) : undefined}
         copied={copiedKey === 'improved'}
-      />
+      >
+        {result && isFree ? (
+          <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center">
+            <p className="max-w-xs text-sm text-slate-600">
+              La optimización de textos avanzada requiere un plan PRO o superior.
+            </p>
+          </div>
+        ) : null}
+      </Card>
     </div>
   );
 }

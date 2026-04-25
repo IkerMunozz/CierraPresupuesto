@@ -50,7 +50,10 @@ export default function QuoteApp() {
 
     try {
       if (payload.streaming) {
-        // Streaming
+        // First, we can't easily know isFree without a call, 
+        // but we can let the final fetch handle it.
+        // However, to avoid showing 0 score, we initialize with null analysis or similar.
+        
         const response = await fetch(`/api/generate?stream=true`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -75,7 +78,7 @@ export default function QuoteApp() {
           buffer += decoder.decode(value, { stream: true });
 
           const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // Keep incomplete line
+          buffer = lines.pop() || '';
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
@@ -86,14 +89,19 @@ export default function QuoteApp() {
                 const content = parsed.choices?.[0]?.delta?.content;
                 if (content) {
                   accumulated += content;
-                  setResult({ quote: accumulated, analysis: { score: 0, feedback: [], risks: [], competitiveness: 'media' }, improvedQuote: '' });
+                  // Set quote but keep analysis as null/empty to show skeleton in Results
+                  setResult({ 
+                    quote: accumulated, 
+                    analysis: { score: 0, feedback: [], risks: [], competitiveness: 'media' }, 
+                    improvedQuote: '',
+                    isFree: undefined // Keep as undefined during stream
+                  });
                 }
-              } catch (e) {
-                // Ignore invalid JSON
-              }
+              } catch (e) {}
             }
           }
         }
+        
         // After streaming, fetch full analysis
         const fullResponse = await fetch('/api/generate', {
           method: 'POST',

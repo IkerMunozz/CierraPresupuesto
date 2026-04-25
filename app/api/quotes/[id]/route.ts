@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { quotes, quoteLines, companies, clients } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getUserPlan } from '@/lib/plans';
 
 export async function GET(
   req: Request,
@@ -28,7 +29,10 @@ export async function GET(
       return NextResponse.json({ message: 'Presupuesto no encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json(quote);
+    const plan = await getUserPlan(session.user.id);
+    const isFree = plan === 'free';
+
+    return NextResponse.json({ ...quote, isFree });
   } catch (error) {
     console.error('Error al obtener presupuesto:', error);
     return NextResponse.json({ message: 'Error interno' }, { status: 500 });

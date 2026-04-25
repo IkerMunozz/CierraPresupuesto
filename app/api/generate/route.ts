@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { quotes } from '@/lib/db/schema';
 import { callOpenAIStream, moderateContent } from '@/lib/openai';
+import { callGeminiStream, hasGeminiKey } from '@/lib/gemini';
 import { getUserPlan, PLANS } from '@/lib/plans';
 
 type GenerateResponse = {
@@ -27,13 +28,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'No autorizado.' }, { status: 401 });
     }
 
-    // Check plan - AI is only for Pro/Business plans
+    // Check plan
     const plan = await getUserPlan(session.user.id);
     const hasAI = PLANS[plan].features.ai;
-
-    if (!hasAI) {
-      return NextResponse.json({ message: 'La IA requiere el plan Pro o Business.', upgrade: true }, { status: 403 });
-    }
+    const isFree = plan === 'free';
 
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
@@ -68,19 +66,37 @@ export async function POST(request: Request) {
     if (isStream) {
       // Streaming: generar solo el quote
       const prompt = `Genera un presupuesto profesional para: ${input.serviceType}, descripción: ${input.description}, precio: ${input.price}, tipo de cliente: ${input.clientType}${input.context ? `, contexto adicional: ${input.context}` : ''}`;
-      const stream = await callOpenAIStream(prompt);
+      
+      let stream: ReadableStream<Uint8Array>;
+      if (hasGeminiKey()) {
+        stream = await callGeminiStream(prompt, 'Eres un experto en ventas B2B/B2C para autónomos.');
+      } else {
+        stream = await callOpenAIStream(prompt);
+      }
 
       return new Response(stream, {
         headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
         },
       });
     } else {
       // Normal: generar completo
       const quote = await generateQuote(input);
-      const analysis = await analyzeQuote(quote);
-      const improvedQuote = await improveQuote(quote, analysis);
+      
+      let analysis = {
+        score: 0,
+        feedback: [],
+        risks: [],
+        competitiveness: 'media' as const,
+      };
+      let improvedQuote = '';
+
+      if (hasAI) {
+        analysis = await analyzeQuote(quote);
+        improvedQuote = await improveQuote(quote, analysis);
+      }
 
       // Save to DB
       await db.insert(quotes).values({
@@ -95,7 +111,7 @@ export async function POST(request: Request) {
         improvedQuote,
       });
 
-      const response: GenerateResponse = { quote, analysis, improvedQuote };
+      const response = { quote, analysis, improvedQuote, isFree };
       return NextResponse.json(response, { status: 200 });
     }
   } catch (error) {

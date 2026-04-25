@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
+import Results from '@/components/Results';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -14,6 +15,7 @@ export default function QuoteDetailPage() {
   const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     fetch(`/api/quotes/${id}`)
@@ -222,6 +224,32 @@ export default function QuoteDetailPage() {
     }
   };
 
+  const generateAnalysis = async () => {
+    setAnalyzing(true);
+    try {
+      const res = await fetch(`/api/quotes/${id}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        // Recargar los datos del presupuesto para mostrar el análisis
+        const quoteRes = await fetch(`/api/quotes/${id}`);
+        const updatedQuote = await quoteRes.json();
+        setQuote(updatedQuote);
+        alert('Análisis generado correctamente');
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.message}`);
+      }
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   if (loading) return <div className="flex min-h-screen items-center justify-center">Cargando...</div>;
   if (!quote) return <div className="flex min-h-screen items-center justify-center">No se encontró el presupuesto</div>;
 
@@ -241,6 +269,11 @@ export default function QuoteDetailPage() {
               <button onClick={sendEmail} disabled={sending} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 transition">
                 {sending ? 'Enviando...' : 'Enviar por Email'}
               </button>
+              {!quote.analysis || (quote.analysis.score === 0) || (quote.analysis.score === 82 && quote.analysis.feedback[0] === 'La propuesta es clara, pero puede abrir más fuerte con un beneficio tangible.') ? (
+                <button onClick={generateAnalysis} disabled={analyzing} className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-green-200 hover:bg-green-700 disabled:opacity-50 transition">
+                  {analyzing ? 'Generando análisis...' : 'Generar Análisis IA'}
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -316,6 +349,25 @@ export default function QuoteDetailPage() {
                 <p className="text-sm text-slate-600 leading-relaxed">{quote.observations}</p>
               </div>
             )}
+          </div>
+
+          {/* AI Analysis Section */}
+          <div className="mt-12 space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-slate-200" />
+              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">Análisis Inteligente</h2>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+            <Results 
+              result={{
+                quote: quote.quote || '',
+                analysis: quote.analysis || { score: 0, feedback: [], risks: [], competitiveness: 'media' },
+                improvedQuote: quote.improvedQuote || '',
+                isFree: quote.isFree
+              }} 
+              loading={false} 
+              error={null} 
+            />
           </div>
         </div>
       </main>
