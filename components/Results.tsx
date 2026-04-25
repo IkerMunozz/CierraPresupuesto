@@ -162,15 +162,7 @@ export default function Results({
         </div>
       ) : null}
 
-      <Card
-        title="Presupuesto"
-        subtitle="Texto profesional listo para enviar."
-        loading={loading}
-        empty="Aquí aparecerá el presupuesto generado."
-        value={result?.quote}
-        onCopy={result?.quote ? () => copy('quote', result.quote) : undefined}
-        copied={copiedKey === 'quote'}
-      />
+      
 
       <Card
         title="Análisis"
