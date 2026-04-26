@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -7,6 +6,9 @@ import { clients } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
+import AddClientButton from '@/components/AddClientButton';
+import EditClientButton from '@/components/EditClientButton';
+import Link from 'next/link';
 
 type Client = typeof clients.$inferSelect;
 
@@ -39,12 +41,7 @@ export default async function ClientsPage() {
               <h1 className="text-3xl font-bold text-slate-900">Mis Clientes</h1>
               <p className="text-slate-500 text-sm mt-1">Gestiona tu cartera de clientes.</p>
             </div>
-            <Link
-              href="/app/clients/new"
-              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
-            >
-              + Nuevo Cliente
-            </Link>
+            <AddClientButton />
           </div>
 
           {userClients.length > 0 ? (
@@ -54,16 +51,10 @@ export default async function ClientsPage() {
                   <h3 className="text-lg font-semibold text-slate-900">{client.name}</h3>
                   <p className="text-sm text-slate-600 mt-1">{client.email}</p>
                   {client.phone && <p className="text-sm text-slate-600">{client.phone}</p>}
-                  {client.industry && <p className="text-sm text-slate-600">{client.industry}</p>}
                   <div className="mt-4 flex gap-2">
+                    <EditClientButton client={client} />
                     <Link
-                      href={`/app/clients/${client.id}/edit`}
-                      className="text-xs font-semibold text-blue-600 hover:underline"
-                    >
-                      Editar
-                    </Link>
-                    <Link
-                      href={`/app/quotes?client=${client.id}`}
+                      href={`/app/history?client=${client.id}`}
                       className="text-xs font-semibold text-blue-600 hover:underline"
                     >
                       Ver presupuestos
@@ -81,12 +72,9 @@ export default async function ClientsPage() {
               </div>
               <h3 className="mt-4 text-lg font-semibold text-slate-900">Aún no has creado clientes</h3>
               <p className="mt-2 text-sm text-slate-600">Comienza añadiendo tu primer cliente para organizar mejor tus presupuestos.</p>
-              <Link
-                href="/app/clients/new"
-                className="mt-6 inline-block rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
-              >
-                Crear primer cliente
-              </Link>
+              <div className="mt-6">
+                <AddClientButton />
+              </div>
             </div>
           )}
         </div>

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { getProviders, signIn } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import SiteHeader from '@/components/SiteHeader';
+import SiteFooter from '@/components/SiteFooter';
 
 type Provider = { id: string; name: string };
 
@@ -104,147 +106,115 @@ export default function RegisterPage() {
   const hasGoogle = Boolean(providers?.google);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 px-4 py-12 sm:px-6 lg:px-10">
-      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
-        <section className="hidden lg:block">
-          <div className="space-y-8">
-            <div className="inline-flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg">
-                <span className="text-lg font-bold">CP</span>
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <SiteHeader />
+      
+      <main className="flex-1 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden">
+            <div className="px-8 pt-10 pb-8">
+              <div className="text-center mb-10">
+                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Crear Cuenta</h1>
+                <p className="mt-2 text-slate-500">Únete a la nueva era de presupuestos con IA</p>
               </div>
-              <span className="text-2xl font-bold text-slate-900">CierraPresupuesto</span>
-            </div>
 
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-                Tu historial, en un solo lugar
-              </h2>
-              <p className="mt-4 text-lg text-slate-600">
-                Crea tu cuenta para guardar presupuestos, comparar mejoras y reutilizar estructura cuando quieras.
-              </p>
-            </div>
+              <form onSubmit={submit} className="space-y-6">
+                {hasGoogle && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={loading !== null}
+                      onClick={handleGoogle}
+                      className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      <GoogleIcon />
+                      {loading === 'google' ? 'Conectando…' : 'Continuar con Google'}
+                    </button>
 
-            <div className="grid gap-4">
-              {[
-                { icon: '💾', title: 'Histórico automático', desc: 'Guarda y vuelve a usar tus propuestas.' },
-                { icon: '✨', title: 'Mejoras listas para enviar', desc: 'Genera una versión optimizada en 1 clic.' },
-                { icon: '🔐', title: 'Acceso seguro', desc: 'Protege tu trabajo con contraseña.' },
-              ].map((item, index) => (
-                <div key={index} className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="text-2xl">{item.icon}</div>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div className="w-full border-t border-slate-100"></div>
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-white px-2 text-slate-400 font-medium tracking-wider">o completar registro</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-4">
                   <div>
-                    <h3 className="font-semibold text-slate-900">{item.title}</h3>
-                    <p className="mt-1 text-sm text-slate-600">{item.desc}</p>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">
+                      Nombre Completo
+                    </label>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      type="text"
+                      required
+                      placeholder="Ej: Juan Pérez"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">
+                      Email
+                    </label>
+                    <input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      type="email"
+                      required
+                      placeholder="nombre@ejemplo.com"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">
+                      Contraseña
+                    </label>
+                    <input
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      type="password"
+                      required
+                      placeholder="Mínimo 6 caracteres"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5"
+                    />
                   </div>
                 </div>
-              ))}
+
+                {error && (
+                  <div className="rounded-2xl bg-red-50 p-4 text-xs font-medium text-red-600 border border-red-100 animate-in fade-in slide-in-from-top-1">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!canSubmit || loading !== null}
+                  className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-bold text-white transition hover:bg-slate-800 shadow-lg shadow-slate-200 disabled:bg-slate-400 disabled:shadow-none"
+                >
+                  {loading === 'credentials' ? 'Creando cuenta…' : 'Crear mi cuenta'}
+                </button>
+              </form>
             </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition">
-            ← Volver a la página principal
-          </Link>
-
-          <div className="mt-8">
-            <h1 className="text-3xl font-bold text-slate-900">Crea tu cuenta</h1>
-            <p className="mt-2 text-slate-600">Empieza a guardar tu trabajo y reutilizar tus mejores propuestas.</p>
-          </div>
-
-          <form onSubmit={submit} className="mt-8 space-y-6">
-            {hasGoogle ? (
-              <button
-                type="button"
-                disabled={loading !== null}
-                onClick={handleGoogle}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <GoogleIcon />
-                {loading === 'google' ? 'Conectando…' : 'Continuar con Google'}
-              </button>
-            ) : null}
-
-            {hasGoogle ? (
-              <div className="flex items-center gap-4">
-                <div className="h-px flex-1 bg-slate-200" />
-                <span className="text-xs text-slate-500">o</span>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-            ) : null}
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  Nombre
-                </label>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  type="text"
-                  required
-                  placeholder="Tu nombre"
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-purple-500 focus:bg-white focus:ring-2 focus:ring-purple-500/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  Correo electrónico
-                </label>
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  type="email"
-                  required
-                  placeholder="tu@email.com"
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-purple-500 focus:bg-white focus:ring-2 focus:ring-purple-500/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  Contraseña
-                </label>
-                <input
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  type="password"
-                  required
-                  placeholder="•••••••• (mínimo 6 caracteres)"
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-purple-500 focus:bg-white focus:ring-2 focus:ring-purple-500/20"
-                />
-              </div>
-            </div>
-
-            {error ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {error}
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={!canSubmit || loading !== null}
-              className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 hover:shadow-lg disabled:cursor-not-allowed disabled:bg-slate-400"
-            >
-              {loading === 'credentials' ? 'Creando…' : 'Crear cuenta con correo'}
-            </button>
-
-            <div className="flex items-center justify-between">
+            
+            <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 text-center">
               <p className="text-sm text-slate-600">
                 ¿Ya tienes cuenta?{' '}
-                <Link className="font-semibold text-blue-600 hover:text-blue-700" href="/login">
-                  Inicia sesión
+                <Link className="font-bold text-blue-600 hover:text-blue-700" href="/login">
+                  Inicia Sesión
                 </Link>
               </p>
-              <Link className="text-sm font-semibold text-slate-600 hover:text-slate-900" href="/app">
-                Ver demo →
-              </Link>
             </div>
-          </form>
-        </section>
-      </div>
-    </main>
+          </div>
+        </div>
+      </main>
+
+      <SiteFooter />
+    </div>
   );
 }

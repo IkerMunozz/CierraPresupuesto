@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 
 function MenuIcon() {
@@ -33,10 +34,15 @@ function UserIcon() {
 
 export default function SiteHeader() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const loading = status === 'loading';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { label: currentPlanLabel, tone, loading: planLoading } = useSubscription();
+
+  const isAuthPage = pathname?.includes('/login') || pathname?.includes('/register');
+  const isLoginPage = pathname?.includes('/login');
+  const isRegisterPage = pathname?.includes('/register');
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/95 backdrop-blur-lg shadow-sm">
@@ -47,19 +53,23 @@ export default function SiteHeader() {
           </div>
         </Link>
 
-        {session?.user ? (
-          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-            <Link href="/" className="hover:text-slate-900">Dashboard</Link>
-            <Link href="/app" className="hover:text-slate-900">Nuevo presupuesto</Link>
-            <Link href="/app/history" className="hover:text-slate-900">Historial</Link>
-            <Link href="/app/clients" className="hover:text-slate-900">Clientes</Link>
-          </nav>
-        ) : (
-          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-            <Link href="#funcionalidades" className="hover:text-slate-900">Funcionalidades</Link>
-            <Link href="#pricing" className="hover:text-slate-900">Precios</Link>
-            <Link href="#faq" className="hover:text-slate-900">FAQ</Link>
-          </nav>
+        {!isAuthPage && (
+          <>
+            {session?.user ? (
+              <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
+                <Link href="/" className="hover:text-slate-900">Dashboard</Link>
+                <Link href="/app" className="hover:text-slate-900">Nuevo presupuesto</Link>
+                <Link href="/app/history" className="hover:text-slate-900">Historial</Link>
+                <Link href="/app/clients" className="hover:text-slate-900">Clientes</Link>
+              </nav>
+            ) : (
+              <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
+                <Link href="#funcionalidades" className="hover:text-slate-900">Funcionalidades</Link>
+                <Link href="#pricing" className="hover:text-slate-900">Precios</Link>
+                <Link href="#faq" className="hover:text-slate-900">FAQ</Link>
+              </nav>
+            )}
+          </>
         )}
 
         <div className="flex items-center gap-3">
@@ -132,21 +142,35 @@ export default function SiteHeader() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Link href="/login" className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                Iniciar sesión
-              </Link>
-              <Link href="/register" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-                Registrarse
-              </Link>
+              {isLoginPage ? (
+                <Link href="/register" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                  Registrarse
+                </Link>
+              ) : isRegisterPage ? (
+                <Link href="/login" className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  Iniciar sesión
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login" className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Iniciar sesión
+                  </Link>
+                  <Link href="/register" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                    Registrarse
+                  </Link>
+                </>
+              )}
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 md:hidden"
-          >
-            {mobileMenuOpen ? <XIcon /> : <MenuIcon />}
-          </button>
+          {!isAuthPage && (
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 md:hidden"
+            >
+              {mobileMenuOpen ? <XIcon /> : <MenuIcon />}
+            </button>
+          )}
         </div>
       </div>
 

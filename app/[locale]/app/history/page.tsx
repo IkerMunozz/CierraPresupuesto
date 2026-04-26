@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { quotes, clients } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 
@@ -13,7 +13,11 @@ type QuoteRow = {
   clients: typeof clients.$inferSelect | null;
 };
 
-export default async function HistoryPage() {
+export default async function HistoryPage({
+  searchParams,
+}: {
+  searchParams: { client?: string };
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -21,13 +25,28 @@ export default async function HistoryPage() {
   }
 
   let userQuotes: QuoteRow[] = [];
+  const clientIdFilter = searchParams.client ? parseInt(searchParams.client) : null;
 
   try {
-    userQuotes = await db.select().from(quotes).leftJoin(clients, eq(quotes.clientId, clients.id)).where(eq(quotes.userId, session.user.id)).orderBy(desc(quotes.createdAt));
+    let query = db
+      .select()
+      .from(quotes)
+      .leftJoin(clients, eq(quotes.clientId, clients.id))
+      .where(
+        and(
+          eq(quotes.userId, session.user.id),
+          clientIdFilter ? eq(quotes.clientId, clientIdFilter) : undefined
+        )
+      )
+      .orderBy(desc(quotes.createdAt));
+    
+    userQuotes = await query;
   } catch (error) {
     console.error('Database error:', error);
     // Continue with empty data
   }
+
+  const filteredClient = clientIdFilter ? userQuotes[0]?.clients?.name : null;
 
   return (
     <>
@@ -36,15 +55,31 @@ export default async function HistoryPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Mis Presupuestos</h1>
-              <p className="text-slate-500 text-sm mt-1">Historial completo de tus presupuestos creados.</p>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {filteredClient ? `Presupuestos: ${filteredClient}` : 'Mis Presupuestos'}
+              </h1>
+              <p className="text-slate-500 text-sm mt-1">
+                {filteredClient 
+                  ? `Viendo el historial de presupuestos para ${filteredClient}.`
+                  : 'Historial completo de tus presupuestos creados.'}
+              </p>
             </div>
-            <Link
-              href="/app"
-              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
-            >
-              + Nuevo Presupuesto
-            </Link>
+            <div className="flex gap-2">
+              {filteredClient && (
+                <Link
+                  href="/app/history"
+                  className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                >
+                  Ver todos
+                </Link>
+              )}
+              <Link
+                href="/app"
+                className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+              >
+                + Nuevo Presupuesto
+              </Link>
+            </div>
           </div>
 
           {userQuotes.length > 0 ? (

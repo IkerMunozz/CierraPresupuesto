@@ -89,7 +89,7 @@ function Card({ title, subtitle, loading, empty, value, children, onCopy, copied
               <Skeleton />
             </div>
           ) : showValue ? (
-            <pre className="whitespace-pre-wrap font-sans">{value}</pre>
+            <pre className="whitespace-pre-wrap font-sans break-words">{value}</pre>
           ) : children ? (
             children
           ) : (
@@ -218,7 +218,7 @@ export default function Results({
                   <h3 className="text-sm font-semibold text-slate-900">Feedback</h3>
                   <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-600">
                     {result.analysis.feedback.map((item, index) => (
-                      <li key={index}>{item}</li>
+                      <li key={index} className="break-words">{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -226,7 +226,7 @@ export default function Results({
                   <h3 className="text-sm font-semibold text-slate-900">Riesgos</h3>
                   <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-600">
                     {result.analysis.risks.map((item, index) => (
-                      <li key={index}>{item}</li>
+                      <li key={index} className="break-words">{item}</li>
                     ))}
                   </ul>
                 </div>

@@ -279,30 +279,30 @@ export default function QuoteDetailPage() {
 
           <div className="rounded-[2.5rem] bg-white p-10 shadow-xl border border-slate-200">
             <div className="flex justify-between border-b border-slate-100 pb-10">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900">{quote.company?.name || 'Empresa'}</h1>
-                <p className="text-slate-500 mt-2">{quote.company?.address}</p>
-                <p className="text-slate-500">{quote.company?.email} · {quote.company?.phone}</p>
+              <div className="max-w-[60%]">
+                <h1 className="text-3xl font-bold text-slate-900 break-words">{quote.company?.name || 'Empresa'}</h1>
+                <p className="text-slate-500 mt-2 break-words">{quote.company?.address}</p>
+                <p className="text-slate-500 break-words">{quote.company?.email} · {quote.company?.phone}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <h2 className="text-sm font-bold uppercase tracking-widest text-blue-600">Presupuesto</h2>
                 <p className="text-3xl font-bold text-slate-900 mt-1">#PRE-{quote.id}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-10 py-10">
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-xs font-bold uppercase text-slate-400 mb-3">Cliente</h3>
-                <p className="font-bold text-slate-900">{quote.client?.name}</p>
-                <p className="text-slate-600">{quote.client?.taxId}</p>
-                <p className="text-slate-600">{quote.client?.address}</p>
-                <p className="text-sm text-blue-600 mt-1">{quote.client?.email}</p>
+                <p className="font-bold text-slate-900 break-words">{quote.client?.name}</p>
+                <p className="text-slate-600 break-words">{quote.client?.taxId}</p>
+                <p className="text-slate-600 break-words">{quote.client?.address}</p>
+                <p className="text-sm text-blue-600 mt-1 break-words">{quote.client?.email}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right min-w-0">
                 <h3 className="text-xs font-bold uppercase text-slate-400 mb-3">Detalles</h3>
-                <p className="text-slate-600"><span className="font-medium">Fecha:</span> {new Date(quote.date).toLocaleDateString()}</p>
-                <p className="text-slate-600"><span className="font-medium">Válido hasta:</span> {quote.validUntil ? new Date(quote.validUntil).toLocaleDateString() : 'N/A'}</p>
-                <p className="text-slate-600"><span className="font-medium">Pago:</span> {quote.paymentMethod}</p>
+                <p className="text-slate-600 break-words"><span className="font-medium">Fecha:</span> {new Date(quote.date).toLocaleDateString()}</p>
+                <p className="text-slate-600 break-words"><span className="font-medium">Válido hasta:</span> {quote.validUntil ? new Date(quote.validUntil).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-slate-600 break-words"><span className="font-medium">Pago:</span> {quote.paymentMethod}</p>
               </div>
             </div>
 
@@ -319,9 +319,9 @@ export default function QuoteDetailPage() {
               <tbody className="divide-y divide-slate-100">
                 {quote.lines?.map((l: any) => (
                   <tr key={l.id}>
-                    <td className="py-5">
-                      <p className="font-bold text-slate-900">{l.name}</p>
-                      <p className="text-sm text-slate-500">{l.description}</p>
+                    <td className="py-5 pr-4">
+                      <p className="font-bold text-slate-900 break-words">{l.name}</p>
+                      <p className="text-sm text-slate-500 break-words whitespace-pre-wrap">{l.description}</p>
                     </td>
                     <td className="py-5 text-center text-slate-600">{l.quantity}</td>
                     <td className="py-5 text-right text-slate-600">{parseFloat(l.unitPrice).toFixed(2)} €</td>
@@ -346,7 +346,7 @@ export default function QuoteDetailPage() {
             {quote.observations && (
               <div className="mt-10 border-t border-slate-100 pt-10">
                 <h3 className="text-xs font-bold uppercase text-slate-400 mb-3">Observaciones</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{quote.observations}</p>
+                <p className="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap">{quote.observations}</p>
               </div>
             )}
           </div>
