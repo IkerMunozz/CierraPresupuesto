@@ -14,11 +14,11 @@ export async function POST(req: Request) {
     const { data, error } = await resend.emails.send({
       from: 'VendeMás AI <onboarding@resend.dev>', // En prod usar dominio verificado
       to: clientEmail,
-      subject: `Presupuesto #PRE-${quoteId} de ${companyName}`,
+      subject: `Presupuesto #PRE-${quoteId.substring(0, 8)} de ${companyName}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #334155;">
           <h2 style="color: #0f172a;">Hola,</h2>
-          <p>Adjunto encontrarás el presupuesto <strong>#PRE-${quoteId}</strong> que hemos preparado para ti desde <strong>${companyName}</strong>.</p>
+          <p>Adjunto encontrarás el presupuesto <strong>#PRE-${quoteId.substring(0, 8)}</strong> que hemos preparado para ti desde <strong>${companyName}</strong>.</p>
           <p>Si tienes cualquier duda, no dudes en contactarnos.</p>
           <br />
           <p style="font-size: 14px; color: #64748b;">Atentamente,<br />El equipo de ${companyName}</p>

@@ -16,24 +16,28 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validated = ProfessionalQuoteSchema.parse(body);
 
-    // Get company and client names for the AI prompt
     const company = await db.query.companies.findFirst({ where: eq(companies.id, validated.companyId) });
     const client = await db.query.clients.findFirst({ where: eq(clients.id, validated.clientId) });
+
+    const clientName = client?.name || 'Cliente';
 
     // 1. Crear el presupuesto (cabecera)
     const [newQuote] = await db.insert(quotes).values({
       userId: session.user.id,
       companyId: validated.companyId,
       clientId: validated.clientId,
+      title: `Presupuesto para ${clientName}`,
+      clientName: clientName,
+      status: 'draft',
+      serviceType: 'Presupuesto Profesional',
       date: new Date(validated.date),
       validUntil: validated.validUntil ? new Date(validated.validUntil) : null,
       paymentMethod: validated.paymentMethod,
       observations: validated.observations,
-      internalNotes: validated.internalNotes,
-      status: 'borrador',
+      context: validated.internalNotes,
     }).returning();
 
-    // 2. Crear las líneas y calcular totales
+    // 2. Crear las líneas
     let totalValue = 0;
     const linesDescription = validated.lines.map(l => {
       const lineTotal = l.quantity * l.unitPrice * (1 + l.iva / 100);
@@ -65,12 +69,16 @@ export async function POST(req: Request) {
       await db.insert(quoteLines).values(linesToInsert);
     }
 
-    // 3. Análisis de IA (solo si tiene plan Pro/Business)
+    // 3. Análisis de IA
     const plan = await getUserPlan(session.user.id);
+    console.log(`🔍 Plan detectado para el usuario ${session.user.id}: ${plan}`);
+
+    let finalQuote = newQuote;
+
     if (PLANS[plan].features.ai) {
       const fullQuoteText = `
         Presupuesto de: ${company?.name || 'Empresa'}
-        Para: ${client?.name || 'Cliente'}
+        Para: ${clientName}
         Conceptos:
         ${linesDescription}
         Total Presupuestado: ${totalValue.toFixed(2)}€
@@ -78,51 +86,32 @@ export async function POST(req: Request) {
       `;
 
       try {
+        console.log('🤖 Iniciando análisis de IA...');
         const analysis = await analyzeQuote(fullQuoteText);
-        const improvedQuote = await improveQuote(fullQuoteText, analysis);
+        const improved = await improveQuote(fullQuoteText, analysis);
 
-        await db.update(quotes)
-          .set({ analysis, improvedQuote })
-          .where(eq(quotes.id, newQuote.id));
-      } catch (aiError) {
-        console.error('Error en análisis de IA:', aiError);
-        // Si falla la IA, guardamos un análisis mock básico
-        const mockAnalysis = {
-          score: 75,
-          feedback: [
-            'La propuesta es clara y profesional.',
-            'Considera añadir plazos específicos de entrega.',
-            'Podrías incluir garantías o condiciones de satisfacción.',
-          ],
-          risks: [
-            'El cliente podría comparar solo por precio.',
-            'Falta detallar el proceso de seguimiento.',
-          ],
-          competitiveness: 'media',
-        };
+        const [updatedQuote] = await db.update(quotes)
+          .set({ 
+            analysis, 
+            improved,
+            score: analysis.score,
+            content: fullQuoteText 
+          })
+          .where(eq(quotes.id, newQuote.id))
+          .returning();
         
-        const mockImprovedQuote = `Versión optimizada del presupuesto:
-        
-${fullQuoteText}
-
-Recomendaciones:
-- Añade plazos específicos
-- Incluye condiciones de pago
-- Destaca tus diferenciadores clave
-- Proporciona garantías de satisfacción`;
-
-        await db.update(quotes)
-          .set({ analysis: mockAnalysis, improvedQuote: mockImprovedQuote })
-          .where(eq(quotes.id, newQuote.id));
+        finalQuote = updatedQuote;
+        console.log('✅ Análisis de IA completado y guardado');
+      } catch (aiError: any) {
+        console.error('❌ Error en análisis de IA:', aiError.message);
       }
+    } else {
+      console.log('⚠️ El plan actual no tiene activada la IA');
     }
 
-    return NextResponse.json(newQuote);
+    return NextResponse.json(finalQuote);
   } catch (error: any) {
-    console.error('❌ Error al crear presupuesto profesional:', error);
-    if (error.name === 'ZodError') {
-      return NextResponse.json({ message: 'Error de validación', details: error.errors }, { status: 400 });
-    }
-    return NextResponse.json({ message: 'Error interno al guardar', error: error.message }, { status: 500 });
+    console.error('❌ Error general en /api/quotes/professional:', error);
+    return NextResponse.json({ message: 'Error interno', error: error.message }, { status: 500 });
   }
 }

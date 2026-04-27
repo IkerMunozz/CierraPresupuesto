@@ -92,7 +92,7 @@ export default async function HistoryPage({
                         #{q.quotes.id}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">PRE-{q.quotes.id} · {q.clients?.name || 'Cliente'}</p>
+                        <p className="font-bold text-slate-900">PRE-{q.quotes.id.substring(0, 8)} · {q.clients?.name || 'Cliente'}</p>
                         <p className="text-sm text-slate-500">{new Date(q.quotes.createdAt).toLocaleDateString('es-ES')}</p>
                       </div>
                     </div>

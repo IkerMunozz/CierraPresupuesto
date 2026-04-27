@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const QuoteInputSchema = z.object({
+  clientName: z.string().trim().min(1, 'El nombre del cliente es obligatorio.'),
   serviceType: z.string().trim().min(1, 'serviceType es obligatorio.'),
   description: z.string().trim().min(1, 'description es obligatorio.'),
   price: z.string().trim().min(1, 'price es obligatorio.'),

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, jsonb, serial, decimal } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, jsonb, serial, decimal, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const users = pgTable('users', {
@@ -8,6 +8,7 @@ export const users = pgTable('users', {
   password: text('password'),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
   image: text('image'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const accounts = pgTable('accounts', {
@@ -107,7 +108,7 @@ export const salesMessages = pgTable('sales_messages', {
     .references(() => users.id, { onDelete: 'cascade' })
     .notNull(),
   leadId: integer('lead_id').references(() => leads.id, { onDelete: 'cascade' }),
-  quoteId: integer('quote_id').references(() => quotes.id, { onDelete: 'cascade' }),
+  quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'cascade' }),
   type: text('type', { enum: ['prospeccion', 'seguimiento', 'objecion', 'cierre'] }).notNull(),
   platform: text('platform', { enum: ['whatsapp', 'email', 'linkedin'] }).default('whatsapp'),
   content: text('content').notNull(),
@@ -157,39 +158,42 @@ export const concepts = pgTable('concepts', {
 });
 
 export const quotes = pgTable('quotes', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').defaultRandom().primaryKey(),
   userId: text('user_id')
     .references(() => users.id, { onDelete: 'cascade' })
     .notNull(),
-  companyId: integer('company_id').references(() => companies.id),
-  clientId: integer('client_id').references(() => clients.id),
-
-  // Datos generales
+  title: text('title').notNull(),
+  clientName: text('client_name').notNull(),
+  content: text('content'), // presupuesto generado
+  analysis: jsonb('analysis'),
+  improved: text('improved'),
+  score: integer('score'),
+  status: text('status', { enum: ['draft', 'sent', 'accepted', 'rejected'] })
+    .default('draft')
+    .notNull(),
+  
+  // Detalles del presupuesto
   date: timestamp('date').defaultNow().notNull(),
   validUntil: timestamp('valid_until'),
   paymentMethod: text('payment_method'),
-  internalNotes: text('internal_notes'),
   observations: text('observations'),
-  status: text('status', { enum: ['borrador', 'enviado', 'aceptado', 'rechazado'] })
-    .default('borrador')
-    .notNull(),
-
-  // Legacy fields (kept for backward compatibility or AI generation)
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  
+  // Legacy fields (kept for metadata if needed)
   serviceType: text('service_type'),
   description: text('description'),
   price: text('price'),
   clientType: text('client_type'),
   context: text('context'),
-  quote: text('quote'), // The full generated text
-  analysis: jsonb('analysis'),
-  improvedQuote: text('improved_quote'),
-
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  companyId: integer('company_id').references(() => companies.id),
+  clientId: integer('client_id').references(() => clients.id),
 });
 
 export const quoteLines = pgTable('quote_lines', {
   id: serial('id').primaryKey(),
-  quoteId: integer('quote_id')
+  quoteId: uuid('quote_id')
     .references(() => quotes.id, { onDelete: 'cascade' })
     .notNull(),
   conceptId: integer('concept_id').references(() => concepts.id),

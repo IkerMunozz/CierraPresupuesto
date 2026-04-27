@@ -113,7 +113,7 @@ async function Dashboard({ userId }: { userId: string }) {
                     >
                       <div>
                         <p className="font-bold text-slate-900">
-                          #PRE-{q.quotes.id} · {q.clients?.name || 'Cliente'}
+                          #PRE-{q.quotes.id.substring(0, 8)} · {q.clients?.name || 'Cliente'}
                         </p>
                         <p className="text-xs text-slate-500">{new Date(q.quotes.createdAt).toLocaleDateString()}</p>
                       </div>

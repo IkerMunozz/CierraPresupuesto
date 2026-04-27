@@ -10,17 +10,6 @@ import { callOpenAIStream, moderateContent } from '@/lib/openai';
 import { callGeminiStream, hasGeminiKey } from '@/lib/gemini';
 import { getUserPlan, PLANS } from '@/lib/plans';
 
-type GenerateResponse = {
-  quote: string;
-  analysis: {
-    score: number;
-    feedback: string[];
-    risks: string[];
-    competitiveness: 'baja' | 'media' | 'alta';
-  };
-  improvedQuote: string;
-};
-
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -87,8 +76,8 @@ export async function POST(request: Request) {
       
       let analysis = {
         score: 0,
-        feedback: [],
-        risks: [],
+        feedback: [] as string[],
+        risks: [] as string[],
         competitiveness: 'media' as const,
       };
       let improvedQuote = '';
@@ -98,18 +87,29 @@ export async function POST(request: Request) {
         improvedQuote = await improveQuote(quote, analysis);
       }
 
-      // Save to DB
-      await db.insert(quotes).values({
-        userId: session.user.id,
-        serviceType: input.serviceType,
-        description: input.description,
-        price: input.price,
-        clientType: input.clientType,
-        context: input.context,
-        quote,
-        analysis,
-        improvedQuote,
-      });
+      // Persistencia en base de datos
+      try {
+        await db.insert(quotes).values({
+          userId: session.user.id,
+          title: `Presupuesto para ${input.clientName}`,
+          clientName: input.clientName,
+          content: quote,
+          analysis: analysis,
+          improved: improvedQuote,
+          score: analysis.score,
+          status: 'draft',
+          // Opcional: guardar metadatos adicionales para compatibilidad
+          serviceType: input.serviceType,
+          description: input.description,
+          price: input.price,
+          clientType: input.clientType,
+          context: input.context,
+        });
+        console.log('✅ Presupuesto guardado en DB');
+      } catch (dbError) {
+        console.error('❌ Error al guardar en DB:', dbError);
+        // No bloqueamos la respuesta al usuario si falla la DB
+      }
 
       const response = { quote, analysis, improvedQuote, isFree };
       return NextResponse.json(response, { status: 200 });
