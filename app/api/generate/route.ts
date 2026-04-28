@@ -1,121 +1,89 @@
 import { NextResponse } from 'next/server';
-import { analyzeQuote, generateQuote, improveQuote, type QuoteInput } from '@/lib/quoteEngine';
+import { generateEnterpriseQuote, generateQuote, generateQuoteStream, type QuoteInput } from '@/lib/quoteEngine';
 import { QuoteInputSchema } from '@/lib/domain/quoteSchemas';
 import { rateLimit } from '@/lib/rateLimit';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { quotes } from '@/lib/db/schema';
-import { callOpenAIStream, moderateContent } from '@/lib/openai';
-import { callGeminiStream, hasGeminiKey } from '@/lib/gemini';
 import { getUserPlan, PLANS } from '@/lib/plans';
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: 'No autorizado.' }, { status: 401 });
-    }
-
-    // Check plan
-    const plan = await getUserPlan(session.user.id);
+    const plan = session?.user?.id ? await getUserPlan(session.user.id) : 'free';
     const hasAI = PLANS[plan].features.ai;
     const isFree = plan === 'free';
 
+    // Rate limiting
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
       const rl = await rateLimit({ key: `generate:${ip}` });
-      if (!rl.ok) {
-        return NextResponse.json(
-          { message: 'Demasiadas solicitudes. Inténtalo de nuevo en unos segundos.' },
-          { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } },
-        );
-      }
+      if (!rl.ok) return NextResponse.json({ message: 'Demasiadas solicitudes.' }, { status: 429 });
     }
 
-    const body = (await request.json()) as unknown;
+    const body = await request.json();
     const validated = QuoteInputSchema.safeParse(body);
-    if (!validated.success) {
-      const first = validated.error.issues[0];
-      return NextResponse.json({ message: first?.message ?? 'Payload inválido.' }, { status: 400 });
-    }
+    if (!validated.success) return NextResponse.json({ message: 'Datos inválidos.' }, { status: 400 });
 
     const input: QuoteInput = validated.data;
-
-    // Moderar contenido
-    const contentToModerate = `${input.serviceType} ${input.description} ${input.context || ''}`;
-    const isSafe = await moderateContent(contentToModerate);
-    if (!isSafe) {
-      return NextResponse.json({ message: 'Contenido no permitido.' }, { status: 400 });
-    }
-
     const url = new URL(request.url);
     const isStream = url.searchParams.get('stream') === 'true';
 
+    // Caso 1: Streaming (Solo genera el presupuesto, sin análisis atómico por ahora)
     if (isStream) {
-      // Streaming: generar solo el quote
-      const prompt = `Genera un presupuesto profesional para: ${input.serviceType}, descripción: ${input.description}, precio: ${input.price}, tipo de cliente: ${input.clientType}${input.context ? `, contexto adicional: ${input.context}` : ''}`;
-      
-      let stream: ReadableStream<Uint8Array>;
-      if (hasGeminiKey()) {
-        stream = await callGeminiStream(prompt, 'Eres un experto en ventas B2B/B2C para autónomos.');
-      } else {
-        stream = await callOpenAIStream(prompt);
-      }
+      const stream = await generateQuoteStream(input);
+      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
+    }
 
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+    // Caso 2: Generación Completa
+    let quote: string;
+    let analysis = { score: 0, feedback: [] as string[], risks: [] as string[], competitiveness: 'media' as const };
+    let improvedQuote = '';
+
+    if (hasAI) {
+      console.log(`🚀 Ejecutando pipeline Enterprise para plan ${plan}...`);
+      const result = await generateEnterpriseQuote(input);
+      quote = result.quote;
+      analysis = result.analysis;
+      improvedQuote = result.improvedQuote;
     } else {
-      // Normal: generar completo
-      const quote = await generateQuote(input);
-      
-      let analysis = {
-        score: 0,
-        feedback: [] as string[],
-        risks: [] as string[],
-        competitiveness: 'media' as const,
-      };
-      let improvedQuote = '';
+      console.log(`ℹ️ Usuario en plan ${plan}, usando generación simple.`);
+      quote = await generateQuote(input);
+    }
 
-      if (hasAI) {
-        analysis = await analyzeQuote(quote);
-        improvedQuote = await improveQuote(quote, analysis);
-      }
-
-      // Persistencia en base de datos
+    // Persistencia en DB
+    if (session?.user?.id) {
       try {
         await db.insert(quotes).values({
           userId: session.user.id,
-          title: `Presupuesto para ${input.clientName}`,
-          clientName: input.clientName,
+          title: `Presupuesto para ${input.clientName || 'Cliente'}`,
+          clientName: input.clientName || 'Cliente',
           content: quote,
-          analysis: analysis,
-          improved: improvedQuote,
-          score: analysis.score,
+          analysis: hasAI ? analysis : null,
+          improved: hasAI ? improvedQuote : null,
+          score: hasAI ? analysis.score : null,
           status: 'draft',
-          // Opcional: guardar metadatos adicionales para compatibilidad
           serviceType: input.serviceType,
           description: input.description,
           price: input.price,
           clientType: input.clientType,
           context: input.context,
         });
-        console.log('✅ Presupuesto guardado en DB');
-      } catch (dbError) {
-        console.error('❌ Error al guardar en DB:', dbError);
-        // No bloqueamos la respuesta al usuario si falla la DB
+      } catch (e) {
+        console.error('Error guardando en DB:', e);
       }
-
-      const response = { quote, analysis, improvedQuote, isFree };
-      return NextResponse.json(response, { status: 200 });
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'No se pudo generar el presupuesto.';
-    return NextResponse.json({ message }, { status: 500 });
+
+    return NextResponse.json({ 
+      quote, 
+      analysis: hasAI ? analysis : null, 
+      improvedQuote: hasAI ? improvedQuote : null, 
+      isFree 
+    });
+
+  } catch (error: any) {
+    console.error('API Error:', error);
+    return NextResponse.json({ message: error.message || 'Error interno en el motor de IA' }, { status: 500 });
   }
 }

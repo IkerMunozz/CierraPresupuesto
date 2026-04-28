@@ -64,9 +64,9 @@ export default function SiteHeader() {
               </nav>
             ) : (
               <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-                <Link href="#funcionalidades" className="hover:text-slate-900">Funcionalidades</Link>
-                <Link href="#pricing" className="hover:text-slate-900">Precios</Link>
-                <Link href="#faq" className="hover:text-slate-900">FAQ</Link>
+                <Link href="/#funcionalidades" className="hover:text-slate-900">Funcionalidades</Link>
+                <Link href="/#pricing" className="hover:text-slate-900">Precios</Link>
+                <Link href="/#faq" className="hover:text-slate-900">FAQ</Link>
               </nav>
             )}
           </>
@@ -127,7 +127,7 @@ export default function SiteHeader() {
                     <button
                       onClick={() => {
                         setProfileOpen(false);
-                        signOut();
+                        signOut({ callbackUrl: '/' });
                       }}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
                     >
@@ -194,7 +194,7 @@ export default function SiteHeader() {
                 <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Mi Perfil</Link>
                 <Link href="/subscription" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1 hover:text-slate-900">Suscripción</Link>
                 <button
-                  onClick={() => signOut()}
+                  onClick={() => signOut({ callbackUrl: '/' })}
                   className="px-3 py-1 text-left text-red-600 hover:text-red-700 font-semibold mt-2"
                 >
                   Cerrar sesión
@@ -202,9 +202,9 @@ export default function SiteHeader() {
               </>
             ) : (
               <>
-                <Link href="#funcionalidades" className="hover:text-slate-900">Funcionalidades</Link>
-                <Link href="#pricing" className="hover:text-slate-900">Precios</Link>
-                <Link href="#faq" className="hover:text-slate-900">FAQ</Link>
+                <Link href="/#funcionalidades" className="hover:text-slate-900">Funcionalidades</Link>
+                <Link href="/#pricing" className="hover:text-slate-900">Precios</Link>
+                <Link href="/#faq" className="hover:text-slate-900">FAQ</Link>
                 <Link href="/login" className="hover:text-slate-900">Iniciar sesión</Link>
                 <Link href="/register" className="hover:text-slate-900">Registrarse</Link>
               </>

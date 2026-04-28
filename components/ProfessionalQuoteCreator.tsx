@@ -393,6 +393,103 @@ function Step3GeneralData({ onNext, onPrev, data, updateData }: StepProps) {
   );
 }
 
+function IAPricingRecommendation({ 
+  total, 
+  clientId, 
+  onApply 
+}: { 
+  total: number, 
+  clientId: number, 
+  onApply: (price: number) => void 
+}) {
+  const [recommendation, setRecommendation] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  const getRecommendation = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/quotes/analysis/pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ basePrice: total, clientId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRecommendation(data);
+      }
+    } catch (e) {
+      console.error('Error fetching recommendation', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!recommendation && !loading) {
+    return (
+      <button 
+        onClick={getRecommendation}
+        className="flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100 transition-all border border-blue-100"
+      >
+        <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+        Analizar precio con IA
+      </button>
+    );
+  }
+
+  if (loading) return <div className="h-12 w-48 animate-pulse bg-slate-100 rounded-xl" />;
+
+  return (
+    <div className="rounded-[1.5rem] border border-blue-200 bg-blue-50/50 p-6 shadow-sm">
+      <div className="flex items-center gap-2 mb-4 text-blue-800">
+        <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold">Optimización de Precio IA</h3>
+          <p className="text-[10px] uppercase font-bold tracking-widest opacity-70">Recomendación estratégica</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div>
+          <p className="text-xs font-bold text-blue-600 uppercase tracking-tighter mb-1">Precio Recomendado</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900">{recommendation.recommendedPrice} €</span>
+            <span className="text-xs font-bold text-slate-500">
+              ({recommendation.minPrice}€ - {recommendation.maxPrice}€)
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col justify-center">
+          <p className="text-xs font-bold text-blue-600 uppercase tracking-tighter mb-1">Probabilidad de Éxito</p>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-600 transition-all duration-1000" 
+                style={{ width: `${recommendation.acceptanceProbability}%` }}
+              />
+            </div>
+            <span className="text-sm font-black text-slate-900">{recommendation.acceptanceProbability}%</span>
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-4 text-sm text-slate-600 leading-relaxed italic border-l-4 border-blue-400 pl-4">
+        "{recommendation.reasoning}"
+      </p>
+
+      <button 
+        onClick={() => onApply(recommendation.recommendedPrice)}
+        className="mt-6 w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white hover:bg-slate-800 transition-all shadow-lg shadow-blue-900/10"
+      >
+        Aplicar precio recomendado
+      </button>
+    </div>
+  );
+}
+
 function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
   const router = useRouter();
   const [lines, setLines] = useState<QuoteLineInput[]>(
@@ -413,6 +510,13 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
   const updateLine = (idx: number, field: keyof QuoteLineInput, value: any) => {
     const newLines = [...lines];
     (newLines[idx] as any)[field] = value;
+    setLines(newLines);
+  };
+
+  const handleApplyAIPrice = (price: number) => {
+    // Aplicar a la última línea o repartir (aquí lo aplicamos a la última por simplicidad)
+    const newLines = [...lines];
+    newLines[newLines.length - 1].unitPrice = price;
     setLines(newLines);
   };
 
@@ -461,7 +565,7 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <div className="flex items-center justify-between border-b border-slate-200 pb-3">
         <div>
           <h2 className="text-base font-semibold text-slate-800">Líneas</h2>
@@ -559,7 +663,16 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
         </div>
       </div>
 
-      <div className="flex justify-between pt-4 border-t border-slate-200 mt-4">
+      {/* IA Recommendation Section */}
+      <div className="mt-4">
+        <IAPricingRecommendation 
+          total={calculateSubtotal()} 
+          clientId={data.clientId} 
+          onApply={handleApplyAIPrice} 
+        />
+      </div>
+
+      <div className="flex justify-between pt-8 border-t border-slate-200 mt-4">
         <button
           onClick={onPrev}
           className="rounded-sm border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
@@ -570,9 +683,9 @@ function Step4Lines({ onPrev, data, updateData }: Omit<StepProps, 'onNext'>) {
           <button
             disabled={isSaving}
             onClick={handleCreate}
-            className="rounded-sm bg-slate-800 px-6 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="rounded-sm bg-slate-900 px-8 py-3 text-sm font-bold text-white hover:bg-slate-800 transition-all shadow-lg disabled:opacity-50"
           >
-            {isSaving ? 'Guardando...' : 'Crear'}
+            {isSaving ? 'Guardando...' : 'Crear Presupuesto'}
           </button>
         </div>
       </div>

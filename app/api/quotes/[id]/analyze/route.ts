@@ -15,10 +15,8 @@ export async function POST(
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
 
-    // ID como string (UUID)
     const quoteId = params.id;
 
-    // Obtener el presupuesto con sus relaciones
     const quote = await db.query.quotes.findFirst({
       where: eq(quotes.id, quoteId),
       with: {
@@ -32,21 +30,25 @@ export async function POST(
       return NextResponse.json({ message: 'Presupuesto no encontrado' }, { status: 404 });
     }
 
-    // Verificar plan del usuario
     const plan = await getUserPlan(session.user.id);
     if (!PLANS[plan].features.ai) {
       return NextResponse.json({ message: 'El análisis de IA requiere un plan PRO o BUSINESS' }, { status: 403 });
     }
 
-    // Generar texto completo del presupuesto para la IA
+    // Lógica robusta para generar el texto para la IA
     const linesDescription = (quote.lines || []).map(l => {
-      const lineTotal = parseFloat(l.quantity.toString()) * parseFloat(l.unitPrice.toString()) * (1 + l.iva / 100);
-      return `- ${l.name}: ${l.quantity} x ${l.unitPrice}€ (Total con IVA: ${lineTotal.toFixed(2)}€). ${l.description || ''}`;
+      const q = parseFloat(l.quantity?.toString() || '0');
+      const p = parseFloat(l.unitPrice?.toString() || '0');
+      const tax = (l.iva || 0) / 100;
+      const lineTotal = q * p * (1 + tax);
+      return `- ${l.name}: ${q} x ${p}€ (Total con IVA: ${lineTotal.toFixed(2)}€). ${l.description || ''}`;
     }).join('\n');
 
     const totalValue = (quote.lines || []).reduce((acc, l) => {
-      const lineTotal = parseFloat(l.quantity.toString()) * parseFloat(l.unitPrice.toString()) * (1 + l.iva / 100);
-      return acc + lineTotal;
+      const q = parseFloat(l.quantity?.toString() || '0');
+      const p = parseFloat(l.unitPrice?.toString() || '0');
+      const tax = (l.iva || 0) / 100;
+      return acc + (q * p * (1 + tax));
     }, 0);
 
     const fullQuoteText = `
@@ -58,39 +60,29 @@ export async function POST(
       Observaciones: ${quote.observations || 'Ninguna'}
     `;
 
-    console.log(`🤖 Generando análisis manual para presupuesto ${quoteShortId(quoteId)}...`);
+    console.log(`🤖 Analizando presupuesto ${quoteId.substring(0, 8)}...`);
 
-    // Generar análisis
     const analysis = await analyzeQuote(fullQuoteText);
     const improved = await improveQuote(fullQuoteText, analysis);
 
-    // Actualizar presupuesto con el análisis
     await db.update(quotes)
       .set({ 
         analysis, 
-        improved, // Nombre de columna corregido
+        improved, 
         score: analysis.score,
-        content: fullQuoteText
+        content: fullQuoteText,
+        updatedAt: new Date()
       })
       .where(eq(quotes.id, quoteId));
 
-    console.log('✅ Análisis manual completado');
-
     return NextResponse.json({ 
-      message: 'Análisis generado correctamente',
+      message: 'Análisis completado',
       analysis,
       improved
     });
 
   } catch (error: any) {
-    console.error('❌ Error al generar análisis:', error);
-    return NextResponse.json({ 
-      message: 'Error al generar análisis', 
-      error: error.message 
-    }, { status: 500 });
+    console.error('❌ Error en /analyze:', error.message);
+    return NextResponse.json({ message: 'Error interno', error: error.message }, { status: 500 });
   }
-}
-
-function quoteShortId(id: string) {
-  return id.substring(0, 8);
 }

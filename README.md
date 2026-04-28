@@ -4,7 +4,7 @@ Aplicación web (MVP) para **autónomos y PYMES** que genera **presupuestos come
 
 - **Frontend**: Next.js (App Router) + React + TypeScript + Tailwind
 - **Backend**: API Routes (`/app/api/*`)
-- **IA**: OpenAI (con modo fallback si no hay clave)
+- **IA**: Gemini (Google Generative AI)
 - **Auth**: NextAuth (Credentials demo/local + Google + Email)
 
 ## Funcionalidades
@@ -12,8 +12,8 @@ Aplicación web (MVP) para **autónomos y PYMES** que genera **presupuestos come
 - **Generación**: crea una propuesta lista para copiar/pegar en email o PDF
 - **Análisis**: score 0–100 + feedback y riesgos de perder la venta
 - **Mejora**: reescritura optimizada para conversión
-- **Historial (actual)**: últimos resultados en memoria (cliente) dentro de la sesión
-- **Auth (actual)**: login/registro por correo (demo) y Google/Email si se configuran providers
+- **Historial**: persistencia en base de datos PostgreSQL
+- **Streaming**: visualización en tiempo real de la generación del presupuesto
 
 ## Estructura del proyecto (rutas)
 
@@ -44,17 +44,15 @@ UPSTASH_REDIS_REST_URL=https://tu-db.upstash.io
 UPSTASH_REDIS_REST_TOKEN=tu_token
 ```
 
-### OpenAI (opcional en local)
+### Gemini (Google AI Studio)
 
-Si no defines `OPENAI_API_KEY`, la app usa **mocks realistas** para no bloquear el desarrollo.
+Si no defines `GEMINI_API_KEY`, la app usa **mocks realistas** para no bloquear el desarrollo.
 
 ```env
-OPENAI_API_KEY=tu_api_key_aqui
-OPENAI_MODEL=gpt-3.5-turbo
-OPENAI_TEMPERATURE=0.7
-OPENAI_MAX_TOKENS=650
-OPENAI_TIMEOUT_MS=25000
-OPENAI_MAX_RETRIES=2
+GEMINI_API_KEY=tu_api_key_aqui
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_TEMPERATURE=0.7
+GEMINI_MAX_TOKENS=2048
 ```
 
 ### NextAuth (recomendado)
@@ -101,13 +99,13 @@ Abre `http://localhost:3000`.
 ## Endpoints principales
 
 - `POST /api/generate`: genera presupuesto + análisis + versión mejorada (`app/api/generate/route.ts`)
-- `GET|POST /api/auth/[...nextauth]`: auth NextAuth (`app/api/auth/[...nextauth]/route.ts`)
+- `GET /api/history`: recupera el historial de presupuestos del usuario
 
 ## Archivos clave
 
 - `app/api/generate/route.ts`: orquestación del flujo de generación
-- `lib/quoteEngine.ts`: prompts + mocks + funciones generate/analyze/improve
-- `lib/openai.ts`: wrapper de OpenAI (pendiente hardening: reintentos/timeout/config)
+- `lib/quoteEngine.ts`: prompts + mocks + funciones generate/analyze/improve (exclusivo Gemini)
+- `lib/gemini.ts`: wrapper de Gemini con reintentos y streaming
 - `components/QuoteApp.tsx`: estado/flujo UI + recientes
 - `components/Form.tsx`: formulario
 - `components/Results.tsx`: render de presupuesto/análisis/mejora + copiar al portapapeles

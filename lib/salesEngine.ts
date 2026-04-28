@@ -1,8 +1,4 @@
-import { OpenAI } from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { callGemini } from '@/lib/gemini';
 
 export type SalesStrategy = 'suave' | 'persuasiva' | 'cierre_directo';
 
@@ -37,20 +33,10 @@ export async function generateNegotiationResponse(
     REGLA: Genera una respuesta lista para enviar por WhatsApp o Email. Que suene 100% humana, sin frases hechas de IA.
   `;
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: systemPrompts[strategy] },
-      { role: 'user', content: userPrompt },
-    ],
-    temperature: 0.7,
-  });
-
-  return response.choices[0].message.content;
+  return await callGemini(userPrompt, systemPrompts[strategy]);
 }
 
 // Mantenemos compatibilidad con el motor v1 para otras partes de la app
 export async function generateSalesMessage(type: string, platform: string, context: any) {
-  // ... lógica anterior o redirigir a la nueva ...
-  return "Funcionalidad v1 integrada en v2";
+  return "Funcionalidad v1 integrada en v2 con Gemini";
 }

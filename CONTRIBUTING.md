@@ -32,7 +32,7 @@ npm run dev
 ## Estructura recomendada (a medida que crezca)
 
 - `lib/domain/`: tipos + schemas (contratos)
-- `lib/services/`: clientes externos (OpenAI, email, etc.)
+- `lib/services/`: clientes externos (Gemini, email, etc.)
 - `lib/usecases/`: orquestación de casos de uso (ej. generar/analisar/mejorar)
 - `app/api/`: capa HTTP delgada (validación + mapping de errores)
 - `components/`: UI reutilizable
@@ -50,7 +50,7 @@ Recomendación: mensajes cortos y descriptivos.
 
 Ejemplos:
 - `feat: add rate limiting to generate endpoint`
-- `fix: handle OpenAI timeout errors`
+- `fix: handle Gemini timeout errors`
 
 ## Pull Requests
 

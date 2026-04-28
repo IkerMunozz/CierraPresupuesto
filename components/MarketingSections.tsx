@@ -66,7 +66,7 @@ export default function MarketingSections() {
               <Metric value="2–3 min" label="De datos a propuesta lista para enviar." />
               <Metric value="0–100" label="Score de conversión para priorizar mejoras." />
               <Metric value="1 clic" label="Copiar presupuesto, análisis o versión mejorada." />
-              <Metric value="Sin líos" label="Modo fallback si no hay OpenAI." />
+              <Metric value="Sin esperas" label="Generación ultra-rápida con Gemini." />
             </div>
           </div>
 
@@ -94,7 +94,7 @@ export default function MarketingSections() {
             <Feature title="Presupuesto profesional" description="Texto listo para enviar, con estructura comercial y foco en valor." />
             <Feature title="Análisis de conversión" description="Score 0–100, feedback y riesgos de perder la venta." />
             <Feature title="Mejora automática" description="Reescritura optimizada para aumentar aceptación sin sonar agresivo." />
-            <Feature title="Modo fallback" description="Sin clave de OpenAI, funciona con respuestas mock realistas." />
+            <Feature title="Inteligencia Pro" description="Utiliza los últimos modelos de Gemini para un análisis profundo y persuasivo." />
           </div>
 
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
@@ -219,7 +219,7 @@ export default function MarketingSections() {
           <div className="max-w-3xl">
             <h2 className="text-2xl font-semibold text-slate-900">Preguntas frecuentes</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Resolvemos dudas típicas sobre cómo funciona la generación, el análisis y el modo fallback.
+              Resolvemos dudas típicas sobre cómo funciona la generación, el análisis y la seguridad de tus datos.
             </p>
           </div>
           <div className="mt-8 grid gap-4 lg:grid-cols-2">
