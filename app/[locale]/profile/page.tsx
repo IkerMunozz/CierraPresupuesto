@@ -15,6 +15,7 @@ import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import PlanBadge from '@/components/PlanBadge';
+import { PLANS, type PlanKey } from '@/lib/plans-config';
 
 // --- Tipos ---
 type ProfileSection = 'personal' | 'business' | 'subscription' | 'security' | 'metrics';
@@ -110,13 +111,6 @@ function BusinessSection({ onSave, saving }: any) {
         <div className="md:col-span-2">
           <InputGroup label="Dirección Fiscal" placeholder="Calle Ejemplo 123" icon={MapPin} />
         </div>
-        <div className="md:col-span-2">
-          <label className="mb-4 block text-xs font-bold uppercase tracking-wider text-slate-500">Logo Corporativo</label>
-          <div className="flex flex-col items-center gap-6 sm:flex-row">
-            <div className="h-24 w-24 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50"><Building2 className="h-8 w-8 text-slate-300" /></div>
-            <button className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Subir logo</button>
-          </div>
-        </div>
       </div>
     </SectionWrapper>
   );
@@ -137,20 +131,72 @@ function MetricCard({ label, value, icon: Icon, trend }: { label: string, value:
   );
 }
 
-function MetricsSection() {
+function MetricsSection({ metrics, loading }: any) {
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
+              <div className="h-6 w-6 bg-slate-200 rounded-xl mb-4"></div>
+              <div className="h-8 w-20 bg-slate-200 rounded mb-2"></div>
+              <div className="h-4 w-16 bg-slate-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Presupuestos" value="128" icon={FileText} trend="+12%" />
-        <MetricCard label="Conversión" value="68%" icon={CheckCircle2} trend="+5%" />
-        <MetricCard label="Ingresos" value="42k€" icon={TrendingUp} trend="+22%" />
-        <MetricCard label="Ahorro" value="14h" icon={Zap} trend="+8h" />
+        <MetricCard 
+          label="Presupuestos" 
+          value={metrics?.totalQuotes?.toString() || '0'} 
+          icon={FileText} 
+          trend={metrics?.trends?.quotes || '+0%'} 
+        />
+        <MetricCard 
+          label="Conversión" 
+          value={`${metrics?.conversionRate || 0}%`} 
+          icon={CheckCircle2} 
+          trend={metrics?.trends?.conversion || '+0%'} 
+        />
+        <MetricCard 
+          label="Ingresos" 
+          value={metrics?.totalRevenue || '0€'} 
+          icon={TrendingUp} 
+          trend={metrics?.trends?.revenue || '+0%'} 
+        />
+        <MetricCard 
+          label="Ahorro" 
+          value={metrics?.timeSaved || '0h'} 
+          icon={Zap} 
+          trend={metrics?.trends?.time || '+0h'} 
+        />
       </div>
     </div>
   );
 }
 
-function SubscriptionSection({ planLabel }: any) {
+function SubscriptionSection({ plan, planLabel }: any) {
+  // Determinar el siguiente plan
+  const getNextPlan = (currentPlan: PlanKey): { key: PlanKey; name: string } | null => {
+    const planOrder: PlanKey[] = ['free', 'pro', 'business'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    if (currentIndex < planOrder.length - 1) {
+      const nextPlan = planOrder[currentIndex + 1];
+      return {
+        key: nextPlan,
+        name: PLANS[nextPlan].name
+      };
+    }
+    return null;
+  };
+
+  const nextPlan = getNextPlan(plan);
+
   return (
     <SectionWrapper title="Suscripción" description="Estado de tu cuenta de pago.">
       <div className="rounded-2xl bg-slate-50 p-8 flex flex-col sm:flex-row justify-between items-center gap-6">
@@ -158,7 +204,20 @@ function SubscriptionSection({ planLabel }: any) {
           <p className="text-xs font-bold text-slate-400 uppercase">Plan Actual</p>
           <p className="text-3xl font-extrabold text-slate-900">{planLabel}</p>
         </div>
-        <button className="rounded-xl bg-white border border-slate-200 px-6 py-3 font-bold flex items-center gap-2 text-sm">Stripe <ExternalLink className="h-4 w-4" /></button>
+        <div className="flex gap-3">
+          <button className="rounded-xl bg-white border border-slate-200 px-6 py-3 font-bold flex items-center gap-2 text-sm hover:bg-slate-50 transition-colors">
+            Gestionar en Stripe <ExternalLink className="h-4 w-4" />
+          </button>
+          {nextPlan && (
+            <button 
+              onClick={() => window.location.href = '/subscription'}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-bold flex items-center gap-2 text-sm text-white hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/30"
+            >
+              <Zap className="h-4 w-4 fill-white" />
+              Actualizar a {nextPlan.name}
+            </button>
+          )}
+        </div>
       </div>
     </SectionWrapper>
   );
@@ -188,6 +247,20 @@ export default function PremiumProfilePage() {
   const { plan, label: planLabel } = useSubscription();
   const [activeSection, setActiveSection] = useState<ProfileSection>('personal');
   const [isSaving, setIsSaving] = useState(false);
+  const [metrics, setMetrics] = useState<any>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+
+  // Cargar métricas cuando se selecciona la sección de métricas
+  React.useEffect(() => {
+    if (activeSection === 'metrics' && !metrics) {
+      setMetricsLoading(true);
+      fetch('/api/user/metrics')
+        .then(res => res.json())
+        .then(data => setMetrics(data))
+        .catch(err => console.error('Error loading metrics:', err))
+        .finally(() => setMetricsLoading(false));
+    }
+  }, [activeSection, metrics]);
 
   if (status === 'loading') return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" /></div>;
   if (status === 'unauthenticated') redirect('/login');
@@ -196,6 +269,22 @@ export default function PremiumProfilePage() {
     setIsSaving(true);
     setTimeout(() => setIsSaving(false), 1000);
   };
+
+  // Determinar el siguiente plan para el botón del header
+  const getNextPlanForHeader = (currentPlan: PlanKey): { key: PlanKey; name: string } | null => {
+    const planOrder: PlanKey[] = ['free', 'pro', 'business'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    if (currentIndex < planOrder.length - 1) {
+      const nextPlan = planOrder[currentIndex + 1];
+      return {
+        key: nextPlan,
+        name: PLANS[nextPlan].name
+      };
+    }
+    return null;
+  };
+
+  const nextPlanHeader = getNextPlanForHeader(plan);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -217,9 +306,9 @@ export default function PremiumProfilePage() {
               </div>
               <p className="mt-2 text-slate-400 italic">Estratega de Negocio</p>
             </div>
-            {plan === 'free' && (
+            {nextPlanHeader && (
               <button onClick={() => window.location.href='/subscription'} className="rounded-2xl bg-blue-600 px-8 py-4 font-bold text-white flex items-center gap-2 hover:bg-blue-700 transition-all">
-                <Zap className="h-5 w-5 fill-white" /> Actualizar a Pro
+                <Zap className="h-5 w-5 fill-white" /> Actualizar a {nextPlanHeader.name}
               </button>
             )}
           </div>
@@ -239,8 +328,8 @@ export default function PremiumProfilePage() {
               <motion.div key={activeSection} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                 {activeSection === 'personal' && <PersonalSection onSave={handleSave} saving={isSaving} session={session} />}
                 {activeSection === 'business' && <BusinessSection onSave={handleSave} saving={isSaving} />}
-                {activeSection === 'metrics' && <MetricsSection />}
-                {activeSection === 'subscription' && <SubscriptionSection planLabel={planLabel} />}
+                {activeSection === 'metrics' && <MetricsSection metrics={metrics} loading={metricsLoading} />}
+                {activeSection === 'subscription' && <SubscriptionSection plan={plan} planLabel={planLabel} />}
                 {activeSection === 'security' && <SecuritySection />}
               </motion.div>
             </AnimatePresence>

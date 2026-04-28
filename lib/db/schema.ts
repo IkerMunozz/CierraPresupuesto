@@ -67,6 +67,7 @@ export const companies = pgTable('companies', {
   phone: text('phone'),
   email: text('email'),
   address: text('address'),
+  logo: text('logo'),
   footerInfo: text('footer_info'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
