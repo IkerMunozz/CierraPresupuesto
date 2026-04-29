@@ -302,39 +302,7 @@ export function EnterpriseDashboard({ data, userName }: { data: DashboardData, u
               </div>
             </section>
 
-            {/* Activity Feed */}
-            <section className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
-              <h3 className="text-base font-bold text-slate-900 mb-8">Actividad Reciente</h3>
-              <div className="space-y-8">
-                {data.activities.map((activity) => (
-                  <div key={activity.id} className="relative flex gap-4">
-                    <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border ${
-                      activity.type === 'accepted' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
-                      activity.type === 'sent' ? 'bg-brand-50 border-brand-100 text-brand-600' :
-                      activity.type === 'rejected' ? 'bg-rose-50 border-rose-100 text-rose-600' :
-                      'bg-slate-50 border-slate-100 text-slate-500'
-                    }`}>
-                      {activity.type === 'accepted' ? <CheckCircle2 size={16} /> :
-                       activity.type === 'sent' ? <ArrowUpRight size={16} /> :
-                       activity.type === 'created' ? <FileText size={16} /> : <ArrowDownRight size={16} />}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">
-                        {activity.type === 'accepted' ? 'Presupuesto aceptado' :
-                         activity.type === 'sent' ? 'Presupuesto enviado' :
-                         activity.type === 'created' ? 'Nuevo borrador' : 'Presupuesto rechazado'}
-                      </p>
-                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                        <span className="font-bold">{activity.clientName}</span> — {activity.quoteTitle}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-1 font-medium">{new Date(activity.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-          </div>
+           </div>
         </div>
       </main>
     </div>

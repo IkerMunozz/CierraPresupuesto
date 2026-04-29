@@ -7,6 +7,11 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'CierraPresupuesto',
   description: 'Genera presupuestos de ventas optimizados con IA',
+  icons: {
+    icon: '/favicon.ico',       // Estándar .ico
+    shortcut: '/favicon.ico',   // Para navegadores
+    apple: '/apple-touch-icon.png', // Apple touch icon (opcional)
+  },
 };
 
 export default async function LocaleLayout({

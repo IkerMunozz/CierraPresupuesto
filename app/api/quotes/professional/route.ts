@@ -6,6 +6,7 @@ import { quotes, quoteLines, companies, clients } from '@/lib/db/schema';
 import { ProfessionalQuoteSchema } from '@/lib/domain/professionalQuoteSchemas';
 import { generateEnterpriseQuote } from '@/lib/quoteEngine';
 import { getUserPlan, PLANS } from '@/lib/plans';
+import { emitQuoteCreated } from '@/lib/db/events';
 import { eq } from 'drizzle-orm';
 
 export async function POST(req: Request) {
@@ -55,7 +56,14 @@ export async function POST(req: Request) {
       };
     });
     
-    if (linesToInsert.length > 0) await db.insert(quoteLines).values(linesToInsert);
+     if (linesToInsert.length > 0) await db.insert(quoteLines).values(linesToInsert);
+
+    // 2.5. Emitir evento de creación
+    await emitQuoteCreated(newQuote.id, {
+      clientName: clientName,
+      companyId: validated.companyId,
+      totalValue: totalValue,
+    });
 
     // 3. IA Enterprise (Solo si el plan lo permite)
     const plan = await getUserPlan(session.user.id);

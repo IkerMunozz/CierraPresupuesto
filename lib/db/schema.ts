@@ -82,7 +82,19 @@ export const clients = pgTable('clients', {
   phone: text('phone'),
   address: text('address'),
   taxId: text('tax_id'),
+  
+  // Campos CRM profesional
+  company: text('company'),
+  sector: text('sector'),
+  potentialValue: decimal('potential_value', { precision: 12, scale: 2 }).default('0.00'),
+  status: text('status', { enum: ['lead', 'active', 'lost'] }).default('lead').notNull(),
+  pipelineStage: text('pipeline_stage', { 
+    enum: ['lead', 'contactado', 'propuesta', 'negociacion', 'ganado', 'perdido'] 
+  }).default('lead'),
+  notes: text('notes'),
+  
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const leads = pgTable('leads', {
@@ -182,6 +194,9 @@ export const quotes = pgTable('quotes', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   
+  // Token para visualización pública
+  viewToken: uuid('view_token').defaultRandom(),
+  
   // Legacy fields (kept for metadata if needed)
   serviceType: text('service_type'),
   description: text('description'),
@@ -205,6 +220,29 @@ export const quoteLines = pgTable('quote_lines', {
   discount: decimal('discount', { precision: 5, scale: 2 }).default('0.00').notNull(),
   iva: integer('iva').default(21).notNull(),
   totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+});
+
+export const quoteEvents = pgTable('quote_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  quoteId: uuid('quote_id')
+    .references(() => quotes.id, { onDelete: 'cascade' })
+    .notNull(),
+  type: text('type').notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const emailTracking = pgTable('email_tracking', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  emailId: text('email_id').unique(), // ID del email de Resend
+  quoteId: uuid('quote_id')
+    .references(() => quotes.id, { onDelete: 'cascade' })
+    .notNull(),
+  eventType: text('event_type').notNull(), // QUOTE_SENT, QUOTE_FOLLOWUP_SENT, etc.
+  recipientEmail: text('recipient_email').notNull(),
+  openedAt: timestamp('opened_at'),
+  clickedAt: timestamp('clicked_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // Relations
@@ -239,6 +277,7 @@ export const companiesRelations = relations(companies, ({ one, many }) => ({
 export const clientsRelations = relations(clients, ({ one, many }) => ({
   user: one(users, { fields: [clients.userId], references: [users.id] }),
   quotes: many(quotes),
+  quoteEvents: many(quoteEvents),
 }));
 
 export const conceptsRelations = relations(concepts, ({ one, many }) => ({
@@ -251,11 +290,16 @@ export const quotesRelations = relations(quotes, ({ one, many }) => ({
   company: one(companies, { fields: [quotes.companyId], references: [companies.id] }),
   client: one(clients, { fields: [quotes.clientId], references: [clients.id] }),
   lines: many(quoteLines),
+  events: many(quoteEvents),
 }));
 
 export const quoteLinesRelations = relations(quoteLines, ({ one }) => ({
   quote: one(quotes, { fields: [quoteLines.quoteId], references: [quotes.id] }),
   concept: one(concepts, { fields: [quoteLines.conceptId], references: [concepts.id] }),
+}));
+
+export const quoteEventsRelations = relations(quoteEvents, ({ one }) => ({
+  quote: one(quotes, { fields: [quoteEvents.quoteId], references: [quotes.id] }),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -272,3 +316,49 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type SubscriptionPlan = 'free' | 'pro' | 'business';
+
+// ==================== NOTAS ====================
+
+export const notes = pgTable('notes', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  clientId: integer('client_id').references(() => clients.id, { onDelete: 'cascade' }),
+  quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  content: text('content'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ==================== TAREAS ====================
+
+export const tasks = pgTable('tasks', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  clientId: integer('client_id').references(() => clients.id, { onDelete: 'cascade' }),
+  quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status', { enum: ['pending', 'completed'] }).default('pending').notNull(),
+  dueDate: timestamp('due_date'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ==================== RELACIONES ====================
+
+export const notesRelations = relations(notes, ({ one }) => ({
+  user: one(users, { fields: [notes.userId], references: [users.id] }),
+  client: one(clients, { fields: [notes.clientId], references: [clients.id] }),
+  quote: one(quotes, { fields: [notes.quoteId], references: [quotes.id] }),
+}));
+
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  user: one(users, { fields: [tasks.userId], references: [users.id] }),
+  client: one(clients, { fields: [tasks.clientId], references: [clients.id] }),
+  quote: one(quotes, { fields: [tasks.quoteId], references: [quotes.id] }),
+}));

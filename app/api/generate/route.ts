@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { quotes } from '@/lib/db/schema';
+import { emitQuoteCreated } from '@/lib/db/events';
 import { getUserPlan, PLANS } from '@/lib/plans';
 
 export async function POST(request: Request) {
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     // Persistencia en DB
     if (session?.user?.id) {
       try {
-        await db.insert(quotes).values({
+        const [newQuote] = await db.insert(quotes).values({
           userId: session.user.id,
           title: `Presupuesto para ${input.clientName || 'Cliente'}`,
           clientName: input.clientName || 'Cliente',
@@ -69,6 +70,12 @@ export async function POST(request: Request) {
           price: input.price,
           clientType: input.clientType,
           context: input.context,
+        }).returning();
+
+        // Emitir evento de creación
+        await emitQuoteCreated(newQuote.id, {
+          clientName: input.clientName || 'Cliente',
+          serviceType: input.serviceType,
         });
       } catch (e) {
         console.error('Error guardando en DB:', e);

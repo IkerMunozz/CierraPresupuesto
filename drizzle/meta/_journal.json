@@ -29,6 +29,13 @@
       "when": 1777373365644,
       "tag": "0003_late_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777445915379,
+      "tag": "0004_luxuriant_dragon_man",
+      "breakpoints": true
     }
   ]
 }
