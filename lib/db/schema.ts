@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, jsonb, serial, decimal, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, jsonb, serial, decimal, uuid, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const users = pgTable('users', {
@@ -347,6 +347,22 @@ export const tasks = pgTable('tasks', {
   dueDate: timestamp('due_date'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  type: text('type', {
+    enum: ['quote_accepted', 'quote_viewed_multiple', 'risk_of_loss', 'closure_opportunity', 'followup_needed', 'alert']
+  }).notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  priority: text('priority', { enum: ['low', 'medium', 'high'] }).default('medium').notNull(),
+  read: boolean('read').default(false).notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // ==================== RELACIONES ====================

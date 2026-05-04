@@ -18,6 +18,8 @@ import {
   Target
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import CopilotCard from '@/components/dashboard/CopilotCard';
+import { ActionLayer } from '@/lib/actions/ActionLayer';
 
 interface DashboardData {
   kpis: {
@@ -42,6 +44,7 @@ interface DashboardData {
   actions: any[];
   activities: any[];
   quotes: any[];
+  copilot?: any;
 }
 
 export function EnterpriseDashboard({ data, userName }: { data: DashboardData, userName?: string }) {
@@ -226,9 +229,15 @@ export function EnterpriseDashboard({ data, userName }: { data: DashboardData, u
             </section>
           </div>
 
-          {/* Right Column: Insights & Actions */}
+          {/* Right Column: Copilot, Insights & Actions */}
           <div className="lg:col-span-4 space-y-8">
             
+            {/* Copilot Card */}
+            {data.copilot && <CopilotCard copilot={data.copilot} />}
+
+            {/* Action Layer */}
+            <ActionLayer />
+
             {/* AI Insights Section */}
             <section className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
               <div className="flex items-center gap-3 mb-8">

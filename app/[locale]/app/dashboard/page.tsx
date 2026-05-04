@@ -8,6 +8,7 @@ import { EnterpriseDashboard } from '@/components/dashboard/EnterpriseDashboard'
 import SiteHeader from '@/components/SiteHeader';
 import { getUnifiedDiagnosticsFromEvents } from '@/lib/services/diagnosticsService';
 import { getDashboardDataFromEvents } from '@/lib/db/events';
+import { runCopilotAnalysis } from '@/lib/services/salesCopilotService';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -38,9 +39,10 @@ export default async function DashboardPage() {
   });
 
   // 4. Obtener datos del dashboard 100% basados en eventos
-  const [dashboardDataFromEvents, diagnostics] = await Promise.all([
+  const [dashboardDataFromEvents, diagnostics, copilotData] = await Promise.all([
     getDashboardDataFromEvents(session.user.id),
     getUnifiedDiagnosticsFromEvents(allQuotes, quoteAmounts),
+    runCopilotAnalysis(session.user.id, 'DAILY_ACTION'),
   ]);
 
   // 5. Preparar datos para la tabla (usar estados derivados de eventos)
@@ -81,6 +83,7 @@ export default async function DashboardPage() {
       amount: 0,
     })),
     quotes: tableQuotes,
+    copilot: copilotData,
   };
 
   return (

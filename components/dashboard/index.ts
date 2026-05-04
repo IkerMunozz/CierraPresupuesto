@@ -7,3 +7,4 @@ export { AIInsights } from './AIInsights';
 export { ActivityFeed, ActivityEvent } from './ActivityFeed';
 export { QuotesTable, QuoteRow } from './QuotesTable';
 export { EnterpriseDashboard } from './EnterpriseDashboard';
+export { ActionLayer } from '../../lib/actions/ActionLayer';

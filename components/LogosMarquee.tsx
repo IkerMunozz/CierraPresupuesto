@@ -15,20 +15,19 @@ const LOGOS = [
 
 function Logo({ name }: { name: string }) {
   return (
-    <div className="mx-3 inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
-      {name}
+    <div className="mx-8 flex items-center justify-center opacity-40 grayscale transition-opacity hover:opacity-70">
+      <span className="text-sm font-bold tracking-wide text-slate-700">{name}</span>
     </div>
   );
 }
 
 export default function LogosMarquee() {
-  // Duplicate list to create seamless scrolling.
   const items = [...LOGOS, ...LOGOS];
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/70 py-5 shadow-soft backdrop-blur">
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-white via-white/80 to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-white via-white/80 to-transparent" />
+    <div className="relative overflow-hidden py-6">
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white to-transparent" />
 
       <div className="flex animate-marquee items-center whitespace-nowrap">
         {items.map((name, idx) => (
@@ -38,4 +37,3 @@ export default function LogosMarquee() {
     </div>
   );
 }
-

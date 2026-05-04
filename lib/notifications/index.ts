@@ -1,6 +1,6 @@
 // lib/notifications/index.ts - Sistema de alertas inteligentes
 import { db } from '@/lib/db';
-import { notifications } from '@/lib/db/schema';
+import { notifications, quotes, quoteEvents } from '@/lib/db/schema';
 import { eq, and, gt, count, sql } from 'drizzle-orm';
 import { QUOTE_EVENT_TYPES } from '@/lib/db/eventTypes';
 
@@ -9,7 +9,8 @@ export type NotificationType =
   | 'quote_viewed_multiple'
   | 'risk_of_loss'
   | 'closure_opportunity'
-  | 'followup_needed';
+  | 'followup_needed'
+  | 'alert';
 
 export type NotificationPriority = 'low' | 'medium' | 'high';
 
@@ -314,11 +315,14 @@ export async function sendAlertByEmail(
 
     if (!user[0]?.email) return false;
 
-    const { resend } = await import('@/lib/resend');
-    if (!resend) return false;
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) return false;
 
-    await resend.emails.send({
-      from: 'alerts@tuapp.com',
+    const { Resend } = await import('resend');
+    const resendInstance = new Resend(resendKey);
+
+    await resendInstance.emails.send({
+      from: 'alerts@vendemas.ai',
       to: user[0].email,
       subject: notification.title,
       html: `<p>${notification.message}</p>`,

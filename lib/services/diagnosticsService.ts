@@ -1,9 +1,10 @@
-// lib/services/diagnosticsService.ts - VERSIÓN BASADA EN EVENTOS
+// lib/services/diagnosticsService.ts - VERSIÓN BASADA EN EVENTOS CON IA PARA TEXTO
 import { generateAdvancedInsights, AIInsight } from './insightService';
 import { generateRecommendedActions, RecommendedAction } from './actionService';
 import { generateExecutiveSummary, ExecutiveSummary } from './summaryService';
 import { analyzeSalesFunnel, FunnelAnalysis } from './funnelService';
 import { getQuotesStatusesFromEvents, QuoteStatusFromEvents } from '@/lib/db/events';
+import { generateInsightTextWithAI, InsightContext } from './aiInsightTextGenerator';
 
 export type BottleneckType = 'DRAFTS_STUCK' | 'LOW_CONVERSION' | 'HIGH_REJECTION' | 'LOW_VOLUME' | 'HEALTHY';
 
@@ -69,40 +70,44 @@ export async function getUnifiedDiagnosticsFromEvents(
   const actions = generateRecommendedActions(quotesWithStatus, quoteAmounts);
   const summary = generateExecutiveSummary(quotesWithStatus, quoteAmounts);
 
-  // 3. SOBRESCRIBIR/ALINEAR SEGÚN EL CUELLO DE BOTELLA
-  const formattedRevenue = new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(
-    Array.from(quoteAmounts.values()).reduce((a, b) => a + b, 0) * (conversionRate / 100 || 0.3)
-  );
+  // 3. GENERAR TEXTO CON IA (mantiene toda la lógica matemática intacta)
+  const totalAmounts = Array.from(quoteAmounts.values()).reduce((a, b) => a + b, 0);
+  const expectedRevenue = totalAmounts * (conversionRate / 100 || 0.3);
+  const avgQuoteAmount = quoteAmounts.size > 0 ? totalAmounts / quoteAmounts.size : 0;
 
-  switch (bottleneck) {
-    case 'LOW_VOLUME':
-      summary.text = `Tu negocio está en fase inicial con **${total} presupuestos**. Necesitas generar más volumen para obtener insights precisos.`;
-      summary.status = 'neutral';
-      funnel.explanation = 'El funnel tiene pocos datos, pero el objetivo ahora es **llenar la parte superior** (Oportunidades).';
-      break;
+  const draftLeakage = total > 0 ? ((total - quotesWithStatus.filter(q => q.status !== 'draft').length) / total) * 100 : 0;
+  const totalNonDraft = sent.length + accepted.length + rejected.length;
+  const salesLeakage = totalNonDraft > 0 ? ((totalNonDraft - accepted.length) / totalNonDraft) * 100 : 0;
 
-    case 'HIGH_REJECTION':
-      summary.text = `Atención: tu **tasa de rechazo (${rejectionRate.toFixed(0)}%)** es el factor crítico que frena tus ingresos potenciales de **${formattedRevenue}**.`;
-      summary.status = 'attention';
-      funnel.explanation = 'Detectamos una **fuga masiva en la fase final**. El cliente recibe el presupuesto pero decide no aceptar.';
-      break;
+  const highSent = quotesWithStatus.filter(q => (q.score || 0) >= 80 && (q.status === 'sent' || q.status === 'viewed' || q.status === 'accepted' || q.status === 'rejected')).length;
+  const highAccepted = quotesWithStatus.filter(q => (q.score || 0) >= 80 && q.status === 'accepted').length;
+  const highScoreConversion = highSent > 0 ? (highAccepted / highSent) * 100 : undefined;
 
-    case 'DRAFTS_STUCK':
-      summary.text = `Tienes **${drafts.length} borradores estancados**. Estos presupuestos no enviados representan una pérdida potencial de **${formattedRevenue}**.`;
-      summary.status = 'attention';
-      funnel.explanation = 'La mayor fuga ocurre antes del envío. **Pierdes el 100% de los clientes** que nunca reciben tu propuesta.';
-      break;
+  const underpricedAccepted = accepted.filter(q => (q.score || 0) > 85 && (quoteAmounts.get(q.id) || 0) < avgQuoteAmount * 0.7).length;
 
-    case 'LOW_CONVERSION':
-      summary.text = `Tus presupuestos llegan al cliente, pero solo el **${conversionRate.toFixed(0)}% acepta**. Necesitas reforzar el cierre de ventas.`;
-      summary.status = 'attention';
-      funnel.explanation = 'El funnel se estrecha peligrosamente en el paso de **Enviado a Cerrado**. El cliente duda antes de firmar.';
-      break;
-  }
+  const aiContext: InsightContext = {
+    conversionRate,
+    totalQuotes: total,
+    drafts: drafts.length,
+    sent: sent.length + accepted.length + rejected.length,
+    accepted: accepted.length,
+    rejected: rejected.length,
+    potentialRevenue: totalAmounts,
+    expectedRevenue,
+    rejectionRate,
+    bottleneck,
+    draftLeakage,
+    salesLeakage,
+    avgQuoteAmount,
+    highScoreConversion,
+    underpricedCount: underpricedAccepted,
+  };
+
+  const aiText = await generateInsightTextWithAI(aiContext);
+
+  summary.text = aiText.summary;
+  summary.status = aiText.status;
+  funnel.explanation = aiText.funnelExplanation;
 
   return {
     summary,

@@ -118,39 +118,91 @@ export async function generateEnterpriseQuote(input: QuoteInput): Promise<Legacy
   if (!hasGeminiKey()) throw new Error('API Key no configurada');
 
   const masterPrompt = `
-    Eres un sistema experto en ventas y análisis comercial. Tu tarea es generar tres componentes basados en los datos del servicio.
-    
-    DATOS DEL SERVICIO:
-    - Servicio: ${input.serviceType}
-    - Descripción: ${input.description}
-    - Precio: ${input.price}
-    - Cliente: ${input.clientType}
-    - Contexto: ${input.context || 'Ninguno'}
+Eres un director comercial senior con 20 años de experiencia en ventas B2B y B2C. Tu trabajo es evaluar presupuestos con criterio STRICTO y REALISTA. No eres un animador — eres un experto que quiere que el usuario venda más.
 
-    TAREAS:
-    1. BUDGET: Genera un presupuesto profesional, persuasivo y listo para enviar.
-    2. ANALYSIS: Realiza un análisis crítico del presupuesto generado (puntuación, feedback accionable, riesgos reales de pérdida y nivel de competitividad).
-    3. IMPROVED: Genera una versión optimizada del presupuesto aplicando el feedback del análisis.
+DATOS DEL PRESUPUESTO A EVALUAR:
+- Servicio: ${input.serviceType}
+- Descripción de líneas: ${input.description}
+- Precio total: ${input.price}
+- Tipo de cliente: ${input.clientType}
+- Contexto/observaciones: ${input.context || 'Ninguno proporcionado'}
 
-    REGLAS CRÍTICAS:
-    - Responde SOLO con el objeto JSON, sin texto adicional
-    - Usa \\n para saltos de línea dentro de los strings
-    - Escapa comillas dobles dentro de los strings con \\
-    - No uses caracteres especiales no escapados
-    - El JSON debe ser válido y parseable
-    
-    Esquema requerido:
-    {
-      "budget": "string (usa \\n para saltos de línea)",
-      "analysis": {
-        "score": number (0-100),
-        "feedback": ["string", "string"],
-        "risks": ["string", "string"],
-        "competitiveness": "low" o "medium" o "high"
-      },
-      "improved": "string (usa \\n para saltos de línea)"
-    }
-  `;
+═══════════════════════════════════════════════════════
+CRITERIOS DE SCORING (0-100) — SÉ DURO, NO REGALAS PUNTOS
+═══════════════════════════════════════════════════════
+
+PENALIZACIONES OBLIGATORIAS:
+- Sin nombre de cliente específico: -25 puntos
+- Descripción genérica ("Componente a", "Servicio profesional"): -20 puntos
+- Sin contexto/observaciones: -15 puntos
+- Sin desglose claro de qué incluye el servicio: -20 puntos
+- Sin diferenciación vs competencia: -15 puntos
+- Sin llamada a la acción clara: -10 puntos
+- Sin urgencia o siguiente paso: -10 puntos
+- Precio sin justificación de valor: -10 puntos
+- Lenguaje vago ("resultados visibles", "proceso claro"): -10 puntos
+- Sin beneficios concretos para EL CLIENTE: -15 puntos
+
+PUNTUACIONES DE REFERENCIA:
+- 0-25: Presupuesto inaceptable. Falta todo.
+- 26-40: Muy deficiente. Genérico, sin personalización.
+- 41-55: Aceptable pero débil. Necesita mejoras sustanciales.
+- 56-70: Bueno pero con gaps importantes.
+- 71-85: Sólido. Profesional, con margen de mejora.
+- 86-95: Excelente. Difícil mejorar.
+- 96-100: Casi perfecto (casi nunca se alcanza)
+
+REGLA DE ORO: Si el presupuesto no menciona al cliente por nombre, no describe beneficios concretos, y usa lenguaje genérico → MAXIMO 35 puntos.
+
+═══════════════════════════════════════════════════════
+TAREAS:
+═══════════════════════════════════════════════════════
+
+1. BUDGET: Genera un presupuesto profesional, persuasivo y listo para enviar. Debe incluir:
+   - Saludo personalizado
+   - Contexto del problema del cliente
+   - Descripción detallada de cada servicio (qué incluye, qué recibe)
+   - Beneficios concretos para el cliente
+   - Precio justificado por valor
+   - Llamada a la acción con siguiente paso claro
+   - Sentido de urgencia legítimo
+
+2. ANALYSIS: Evalúa el presupuesto ORIGINAL (no el que generas) con criterio severo:
+   - score: Aplica las penalizaciones arriba. Sé honesto, no amable.
+   - feedback: Puntos específicos de mejora, NO genéricos. Menciona qué falta EXACTAMENTE.
+   - risks: Riesgos REALES de perder la venta. No inventes — analiza lo que hay.
+   - competitiveness: low (genérico, sin valor), medium (aceptable pero mejorable), high (diferenciado y persuasivo)
+
+3. IMPROVED: Genera una versión corregida aplicando TODO el feedback.
+
+═══════════════════════════════════════════════════════
+EJEMPLO DE SCORING CORRECTO:
+═══════════════════════════════════════════════════════
+
+Input: Servicio "Componente a", Precio "500€", Cliente "Empresa/Autónomo", Contexto "Ninguno"
+→ Score: 15-25 (no hay nombre, no hay descripción, no hay contexto, no hay beneficios)
+→ Feedback: "El nombre del servicio 'Componente a' no dice nada al cliente", "No se describe qué incluye", "No hay justificación del precio"
+
+Input: Servicio "Diseño web corporativo", Precio "2.500€", Cliente "Restaurante La Paella", Contexto "Quiere mejorar presencia online"
+→ Score: 40-55 (mejor pero aún genérico, falta personalización real)
+→ Feedback: "No se mencionan los objetivos del restaurante", "Sin métricas de resultado", "Sin plazos de entrega"
+
+═══════════════════════════════════════════════════════
+
+Responde SOLO con el objeto JSON, sin texto adicional.
+Usa \\n para saltos de línea dentro de los strings.
+
+Esquema:
+{
+  "budget": "presupuesto profesional con \\n",
+  "analysis": {
+    "score": number,
+    "feedback": ["punto concreto 1", "punto concreto 2", "punto concreto 3"],
+    "risks": ["riesgo real 1", "riesgo real 2"],
+    "competitiveness": "low" o "medium" o "high"
+  },
+  "improved": "versión mejorada con \\n"
+}`;
 
   const systemInstruction = "Eres un motor de generación de ventas de nivel enterprise. Devuelve SIEMPRE JSON.";
 

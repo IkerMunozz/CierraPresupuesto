@@ -5,12 +5,12 @@ import '../globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'CierraPresupuesto',
+  title: 'VendeMás',
   description: 'Genera presupuestos de ventas optimizados con IA',
   icons: {
-    icon: '/favicon.ico',       // Estándar .ico
-    shortcut: '/favicon.ico',   // Para navegadores
-    apple: '/apple-touch-icon.png', // Apple touch icon (opcional)
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
   },
 };
 

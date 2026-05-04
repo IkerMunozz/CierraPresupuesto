@@ -38,98 +38,224 @@ export default function QuoteDetailPage() {
       });
   }, [id]);
 
-  const generatePDFBlob = () => {
+  const generatePDFBlob = async () => {
     if (!quote || !quote.id) return null;
     const doc = new jsPDF() as any;
     const primaryColor = [15, 23, 42];
-    const accentColor = [37, 99, 235];
+    const accentColor = [59, 130, 246];
     const secondaryColor = [100, 116, 139];
 
+    let logoImg: string | null = null;
+    try {
+      const resp = await fetch('/logo.png');
+      const blob = await resp.blob();
+      const reader = new FileReader();
+      logoImg = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {}
+
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, 210, 40, 'F');
+    doc.rect(0, 0, 210, 45, 'F');
+
+    if (logoImg) {
+      doc.addImage(logoImg, 'PNG', 18, 12, 28, 12);
+    } else {
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.text('VendeMás', 18, 26);
+    }
+
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(24);
-    doc.text('VendeMás AI', 20, 25);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('PRESUPUESTOS PROFESIONALES', 20, 32);
-
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PRESUPUESTO', 150, 20);
     doc.setFontSize(18);
-    doc.text(`#PRE-${quote.id.substring(0, 8)}`, 150, 30);
+    doc.text('PRESUPUESTO', 192, 20, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(new Date(quote.date || quote.createdAt).toLocaleDateString('es-ES', {
+      day: '2-digit', month: 'long', year: 'numeric'
+    }), 192, 28, { align: 'right' });
 
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFontSize(12);
-    doc.text('DE:', 20, 55);
-    doc.text('PARA:', 110, 55);
-    doc.setDrawColor(226, 232, 240);
-    doc.line(20, 58, 90, 58);
-    doc.line(110, 58, 180, 58);
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.rect(0, 45, 210, 1.5, 'F');
+
+    const yStart = 55;
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.text('DE', 18, yStart);
+    doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.line(18, yStart + 2, 30, yStart + 2);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text(quote.company?.name || 'Mi Empresa', 20, 65);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.text(quote.company?.address || '', 20, 70, { maxWidth: 70 });
-    doc.text(quote.company?.email || '', 20, 85);
-
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.text(quote.client?.name || quote.clientName || 'Cliente', 110, 65);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.text(`NIF/CIF: ${quote.client?.taxId || '-'}`, 110, 70);
-    doc.text(quote.client?.email || '', 110, 85);
+    doc.text(quote.company?.name || 'Mi Empresa', 18, yStart + 8);
 
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    let y = yStart + 13;
+    if (quote.company?.address) { doc.text(quote.company.address, 18, y, { maxWidth: 75 }); y += 5; }
+    if (quote.company?.email) { doc.text(quote.company.email, 18, y, { maxWidth: 75 }); y += 5; }
+    if (quote.company?.phone) { doc.text(quote.company.phone, 18, y, { maxWidth: 75 }); }
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.text('PARA', 115, yStart);
+    doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.line(115, yStart + 2, 130, yStart + 2);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text(quote.client?.name || quote.clientName || 'Cliente', 115, yStart + 8);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    y = yStart + 13;
+    if (quote.client?.taxId) { doc.text(`NIF/CIF: ${quote.client.taxId}`, 115, y); y += 5; }
+    if (quote.client?.email) { doc.text(quote.client.email, 115, y, { maxWidth: 75 }); y += 5; }
+    if (quote.client?.address) { doc.text(quote.client.address, 115, y, { maxWidth: 75 }); }
+
+    const yDetails = yStart + 25;
     doc.setFillColor(248, 250, 252);
-    doc.rect(20, 95, 170, 15, 'F');
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.setFontSize(9);
-    doc.text('FECHA EMISIÓN', 25, 101);
-    doc.text('MÉTODO DE PAGO', 140, 101);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.roundedRect(18, yDetails, 174, 12, 1.5, 1.5, 'F');
+
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text(new Date(quote.date || quote.createdAt).toLocaleDateString(), 25, 106);
-    doc.text(quote.paymentMethod || 'A convenir', 140, 106);
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.text('FECHA', 24, yDetails + 4.5);
+    doc.text('MÉTODO DE PAGO', 85, yDetails + 4.5);
+    if (quote.validUntil) doc.text('VÁLIDO HASTA', 150, yDetails + 4.5);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text(new Date(quote.date || quote.createdAt).toLocaleDateString('es-ES'), 24, yDetails + 9);
+    doc.text(quote.paymentMethod || 'A convenir', 85, yDetails + 9);
+    if (quote.validUntil) {
+      doc.text(new Date(quote.validUntil).toLocaleDateString('es-ES'), 150, yDetails + 9);
+    }
 
     const tableLines = quote.lines || [];
     const tableData = tableLines.map((l: any) => [
-      { content: l.name + (l.description ? `\n${l.description}` : ''), styles: { fontStyle: 'bold' } },
-      l.quantity,
+      l.name,
+      l.description || '',
+      l.quantity.toString(),
       `${parseFloat(l.unitPrice || 0).toFixed(2)} €`,
       `${l.iva}%`,
-      { content: `${parseFloat(l.totalAmount || 0).toFixed(2)} €`, styles: { halign: 'right', fontStyle: 'bold' } }
+      `${parseFloat(l.totalAmount || 0).toFixed(2)} €`
     ]);
 
     autoTable(doc, {
-      startY: 115,
-      head: [['Descripción', 'Cantidad', 'Precio U.', 'IVA', 'Total']],
+      startY: yDetails + 16,
+      head: [['Concepto', 'Descripción', 'Cant.', 'Precio U.', 'IVA', 'Total']],
       body: tableData,
-      theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249], textColor: primaryColor, fontStyle: 'bold' },
-      columnStyles: { 0: { cellWidth: 80 }, 1: { halign: 'center' }, 4: { halign: 'right' } }
+      theme: 'grid',
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontSize: 8,
+        fontStyle: 'bold',
+        halign: 'center',
+        cellPadding: 3.5
+      },
+      bodyStyles: {
+        fontSize: 8,
+        cellPadding: 3,
+        textColor: [51, 65, 85]
+      },
+      columnStyles: {
+        0: { cellWidth: 38, fontStyle: 'bold', textColor: primaryColor },
+        1: { cellWidth: 58, textColor: secondaryColor },
+        2: { cellWidth: 14, halign: 'center' },
+        3: { cellWidth: 22, halign: 'right' },
+        4: { cellWidth: 14, halign: 'center' },
+        5: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: primaryColor }
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 18, right: 18 }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const finalY = (doc as any).lastAutoTable.finalY + 6;
     const total = tableLines.reduce((acc: number, l: any) => acc + parseFloat(l.totalAmount || 0), 0);
-    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-    doc.rect(130, finalY, 60, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
+    const subtotal = tableLines.reduce((acc: number, l: any) => acc + parseFloat(l.totalAmount || 0) / (1 + l.iva / 100), 0);
+    const ivaTotal = total - subtotal;
+
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(130, finalY, 62, 24, 1.5, 1.5, 'F');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.text('Subtotal', 135, finalY + 6);
+    doc.text('IVA', 135, finalY + 11.5);
+
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL', 135, finalY + 8);
-    doc.text(`${total.toFixed(2)} €`, 185, finalY + 8, { align: 'right' });
+    doc.setFontSize(9.5);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('TOTAL', 135, finalY + 19);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`${subtotal.toFixed(2)} €`, 188, finalY + 6, { align: 'right' });
+    doc.text(`${ivaTotal.toFixed(2)} €`, 188, finalY + 11.5, { align: 'right' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(`${total.toFixed(2)} €`, 188, finalY + 19, { align: 'right' });
+
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.rect(130, finalY + 24, 62, 1, 'F');
+
+    let footerY = finalY + 32;
+    if (quote.observations) {
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.text('Observaciones:', 18, footerY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(quote.observations, 18, footerY + 4.5, { maxWidth: 174 });
+      footerY += 12;
+    }
+
+    const pageH = doc.internal.pageSize.height || 297;
+    doc.setDrawColor(226, 232, 240);
+    doc.line(18, footerY, 192, footerY);
+
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, pageH - 16, 210, 16, 'F');
+
+    if (logoImg) {
+      doc.addImage(logoImg, 'PNG', 18, pageH - 13, 20, 9);
+    } else {
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('VendeMás', 18, pageH - 7);
+    }
+
+    doc.setTextColor(148, 163, 184);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('Generado con VendeMás · Presupuestos profesionales con inteligencia artificial', 192, pageH - 7, { align: 'right' });
 
     return doc;
   };
 
-  const handleDownloadPDF = () => {
-    const doc = generatePDFBlob();
-    if (doc) doc.save(`Presupuesto_${quote.id.substring(0, 8)}.pdf`);
+  const handleDownloadPDF = async () => {
+    const doc = await generatePDFBlob();
+    if (doc) doc.save(`Presupuesto_${quote.client?.name || quote.clientName || 'cliente'}.pdf`);
   };
 
   const sendEmail = async () => {
@@ -139,7 +265,8 @@ export default function QuoteDetailPage() {
     }
     setSending(true);
     try {
-      const doc = generatePDFBlob();
+      const doc = await generatePDFBlob();
+      if (!doc) throw new Error('No se pudo generar el PDF');
       const pdfBase64 = doc.output('datauristring').split(',')[1];
       const res = await fetch('/api/send-email', {
         method: 'POST',
@@ -148,7 +275,9 @@ export default function QuoteDetailPage() {
           quoteId: quote.id,
           clientEmail: quote.client.email,
           companyName: quote.company?.name || 'Mi Empresa',
+          clientName: quote.client?.name || quote.clientName,
           pdfBase64,
+          quoteTitle: quote.title,
         }),
       });
       if (res.ok) alert('Presupuesto enviado con éxito');
@@ -230,8 +359,8 @@ export default function QuoteDetailPage() {
                     <FileText className="h-4 w-4 text-blue-400" />
                     <span className="text-xs font-bold uppercase tracking-wider text-white">Presupuesto</span>
                   </div>
-                  <p className="text-3xl font-black text-white mt-3 tracking-tight">
-                    #{quote.id?.substring(0, 8).toUpperCase()}
+                  <p className="text-lg font-semibold text-white mt-3 tracking-tight">
+                    {new Date(quote.date || quote.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </p>
                 </div>
               </div>

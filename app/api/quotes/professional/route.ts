@@ -88,11 +88,11 @@ Observaciones: ${validated.observations || 'Ninguna'}`;
       try {
         // Mapeamos los datos profesionales al formato que entiende el motor de IA
         const aiResult = await generateEnterpriseQuote({
-          serviceType: "Servicios Profesionales Detallados",
+          serviceType: validated.lines.map(l => l.name).join(', '),
           description: itemsDescription,
           price: `${totalValue.toFixed(2)}€`,
-          clientType: client?.taxId ? "Empresa/Autónomo" : "Particular",
-          context: `Notas adicionales: ${validated.observations || 'Ninguna'}. Método de pago: ${validated.paymentMethod}`
+          clientType: client?.taxId ? `Empresa — ${client.name}` : `Particular — ${client.name}`,
+          context: `Cliente: ${client?.name || 'No especificado'}. Notas: ${validated.observations || 'Sin observaciones'}. Método de pago: ${validated.paymentMethod || 'No definido'}. Empresa emisora: ${company?.name || 'No especificada'}.`
         });
 
         const [updatedQuote] = await db.update(quotes)

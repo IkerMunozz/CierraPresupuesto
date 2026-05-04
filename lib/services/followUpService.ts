@@ -1,19 +1,18 @@
 // lib/services/followUpService.ts
-import { google } from '@ai-sdk/google';
-import { generateText } from 'ai';
 import { db } from '@/lib/db';
 import { quotes, quoteEvents } from '@/lib/db/schema';
-import { eq, and, desc, gt, lt } from 'drizzle-orm';
+import { eq, and, desc, gt } from 'drizzle-orm';
 import { QUOTE_EVENT_TYPES } from '@/lib/db/eventTypes';
-
-const apiKey = process.env.GOOGLE_AI_API_KEY;
-const model = apiKey ? google('gemini-1.5-flash', { apiKey }) : null;
+import { buildSalesContext, SalesContext } from './salesContext';
+import { decideFollowUp, FollowUpDecision } from './followUpDecision';
+import { generateFollowUpEmail as generateEmail, GeneratedEmail } from './followUpEmailGenerator';
 
 export interface FollowUpDraft {
   subject: string;
   html: string;
   text: string;
   quoteId: string;
+  tone: string;
   daysSinceSent: number;
 }
 
@@ -23,199 +22,108 @@ export interface FollowUpResult {
   error?: string;
 }
 
-/**
- * Detecta presupuestos que necesitan seguimiento
- * (enviados hace 3+ días sin aceptación)
- */
-export async function detectQuotesNeedingFollowUp(userId?: string): Promise<{
+export interface FollowUpTarget {
   quoteId: string;
   title: string;
   clientName: string;
-  clientEmail?: string;
-  sentAt: Date;
-  daysSinceSent: number;
-}[]> {
-  const now = new Date();
-  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  clientEmail: string | null;
+  decision: FollowUpDecision;
+  context: SalesContext;
+}
 
-  // Obtener eventos SENT de hace 3+ días
-  const sentEvents = await db
-    .select({
-      quoteId: quoteEvents.quoteId,
-      sentAt: quoteEvents.createdAt,
-    })
-    .from(quoteEvents)
-    .where(
-      and(
-        eq(quoteEvents.type, QUOTE_EVENT_TYPES.SENT),
-        lt(quoteEvents.createdAt, threeDaysAgo)
-      )
-    )
-    .orderBy(desc(quoteEvents.createdAt));
-
-  const result: any[] = [];
+export async function detectQuotesNeedingFollowUp(userId?: string): Promise<FollowUpTarget[]> {
+  const results: FollowUpTarget[] = [];
   const seen = new Set<string>();
+
+  const sentEvents = await db
+    .select({ quoteId: quoteEvents.quoteId, sentAt: quoteEvents.createdAt })
+    .from(quoteEvents)
+    .where(eq(quoteEvents.type, QUOTE_EVENT_TYPES.SENT))
+    .orderBy(desc(quoteEvents.createdAt));
 
   for (const event of sentEvents) {
     if (seen.has(event.quoteId)) continue;
-    seen.add(event.quoteId);
 
-    // Verificar si tiene ACCEPTED o REJECTED después del SENT
     const laterEvents = await db
       .select({ type: quoteEvents.type })
       .from(quoteEvents)
-      .where(
-        and(
-          eq(quoteEvents.quoteId, event.quoteId),
-          gt(quoteEvents.createdAt, event.sentAt)
-        )
-      );
+      .where(and(eq(quoteEvents.quoteId, event.quoteId), gt(quoteEvents.createdAt, event.sentAt)));
 
-    const hasFinalEvent = laterEvents.some(
-      e => e.type === QUOTE_EVENT_TYPES.ACCEPTED || e.type === QUOTE_EVENT_TYPES.REJECTED
-    );
+    if (laterEvents.some(e => e.type === QUOTE_EVENT_TYPES.ACCEPTED || e.type === QUOTE_EVENT_TYPES.REJECTED)) continue;
 
-    if (hasFinalEvent) continue;
-
-    // Obtener datos del presupuesto
     const quote = await db
-      .select({
-        title: quotes.title,
-        clientName: quotes.clientName,
-        clientEmail: quotes.clientEmail,
-        userId: quotes.userId,
-      })
+      .select({ title: quotes.title, clientName: quotes.clientName, clientEmail: quotes.clientEmail, userId: quotes.userId })
       .from(quotes)
       .where(eq(quotes.id, event.quoteId))
       .limit(1);
 
-    if (!quote[0]) continue;
-    if (userId && quote[0].userId !== userId) continue;
+    if (!quote[0] || (userId && quote[0].userId !== userId)) continue;
 
-    const sentDate = new Date(event.sentAt);
-    const daysSinceSent = Math.floor(
-      (now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    seen.add(event.quoteId);
 
-    result.push({
+    const context = await buildSalesContext(event.quoteId);
+    if (!context) continue;
+
+    const decision = decideFollowUp(context);
+    if (decision.action.type !== 'send_email') continue;
+
+    results.push({
       quoteId: event.quoteId,
       title: quote[0].title || 'Sin título',
-      clientName: quote[0].clientName,
-      clientEmail: quote[0].clientEmail || undefined,
-      sentAt: sentDate,
-      daysSinceSent,
+      clientName: quote[0].clientName || 'Cliente',
+      clientEmail: quote[0].clientEmail || null,
+      decision,
+      context,
     });
   }
 
-  return result;
+  return results.sort((a, b) => {
+    const order = { critical: 4, high: 3, medium: 2, low: 1 };
+    return order[b.decision.priority] - order[a.decision.priority];
+  });
 }
 
-/**
- * Genera un email de seguimiento usando IA
- */
 export async function generateFollowUpEmail(
   quoteId: string,
-  options?: { tone?: 'professional' | 'soft' | 'urgent' }
+  decision: FollowUpDecision,
+  context: SalesContext
 ): Promise<FollowUpResult> {
+  if (decision.action.type !== 'send_email') {
+    return { success: false, error: `Acción no es email: ${decision.action.type}` };
+  }
+
   try {
-    if (!model) {
-      return { success: false, error: 'Google AI API key not configured' };
-    }
-
-    const quote = await db
-      .select({
-        title: quotes.title,
-        clientName: quotes.clientName,
-      })
-      .from(quotes)
-      .where(eq(quotes.id, quoteId))
-      .limit(1);
-
-    if (!quote[0]) {
-      return { success: false, error: 'Quote not found' };
-    }
-
-    const { title, clientName } = quote[0];
-    const tone = options?.tone || 'professional';
-    const daysSince = await getDaysSinceSent(quoteId);
-
-    const prompt = `Eres un asistente profesional de ventas. Genera un email de seguimiento para un presupuesto.
-
-Datos:
-- Cliente: ${clientName}
-- Presupuesto: ${title}
-- Días desde envío: ${daysSince}
-- Tono: ${tone}
-
-Instrucciones:
-1. Saludo profesional
-2. Recordatorio suave del presupuesto enviado
-3. Preguntar si tiene dudas o necesita aclaraciones
-4. Cierre cortés
-5. NO ser pesado ni insistente
-6. Mantener entre 50-100 palabras
-
-Devuelve SOLO el cuerpo del email (texto plano) sin asunto.`;
-
-    const { text } = await generateText({
-      model,
-      prompt,
-      maxTokens: 300,
-    });
-
-    const subject = `Seguimiento: ${title}`;
-    const html = `<div style="font-family: sans-serif; line-height: 1.6;">
-      <p>Estimado/a ${clientName},</p>
-      <p>${text.replace(/\n/g, '<br/>')}</p>
-      <p>Atentamente,<br/>El equipo</p>
-    </div>`;
+    const generated = await generateEmail(context, decision);
+    const html = wrapInHtml(generated.body);
 
     return {
       success: true,
       draft: {
-        subject,
+        subject: generated.subject,
         html,
-        text,
+        text: generated.body,
         quoteId,
-        daysSinceSent: daysSince,
+        tone: decision.action.tone,
+        daysSinceSent: context.daysSinceSent,
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
   }
 }
 
-async function getDaysSinceSent(quoteId: string): Promise<number> {
-  const sentEvent = await db
-    .select({ createdAt: quoteEvents.createdAt })
-    .from(quoteEvents)
-    .where(
-      and(
-        eq(quoteEvents.quoteId, quoteId),
-        eq(quoteEvents.type, QUOTE_EVENT_TYPES.SENT)
-      )
-    )
-    .orderBy(desc(quoteEvents.createdAt))
-    .limit(1);
-
-  if (!sentEvent[0]) return 0;
-
-  const now = new Date();
-  const sentDate = new Date(sentEvent[0].createdAt);
-  return Math.floor((now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
+function wrapInHtml(body: string): string {
+  return `<div style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1e293b;">
+    <p>${body.replace(/\n/g, '<br/>')}</p>
+    <p style="margin-top: 24px; color: #64748b;">Saludos cordiales</p>
+  </div>`;
 }
 
-/**
- * Envía el follow-up
- */
 export async function sendFollowUp(
   quoteId: string,
   draft: FollowUpDraft,
   recipientEmail: string,
-  options?: { manualReview?: boolean }
+  options?: { fromEmail?: string; manualReview?: boolean }
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
   try {
     const { sendTrackedEmail } = await import('@/lib/email');
@@ -226,6 +134,7 @@ export async function sendFollowUp(
       html: draft.html,
       text: draft.text,
       quoteId,
+      from: options?.fromEmail,
       eventType: QUOTE_EVENT_TYPES.FOLLOWUP_SENT,
     });
 
@@ -234,15 +143,48 @@ export async function sendFollowUp(
       await emitEvent(QUOTE_EVENT_TYPES.FOLLOWUP_SENT, quoteId, {
         emailId: result.emailId,
         daysSinceSent: draft.daysSinceSent,
+        tone: draft.tone,
+        subject: draft.subject,
+        body: draft.text,
         manualReview: options?.manualReview || false,
       });
     }
 
     return { success: result.success, emailId: result.emailId, error: result.error };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
   }
+}
+
+export async function processFollowUpQueue(userId?: string): Promise<{
+  sent: number;
+  skipped: number;
+  errors: { quoteId: string; error: string }[];
+}> {
+  const targets = await detectQuotesNeedingFollowUp(userId);
+  let sent = 0;
+  let skipped = 0;
+  const errors: { quoteId: string; error: string }[] = [];
+
+  for (const target of targets) {
+    if (!target.clientEmail) {
+      skipped++;
+      continue;
+    }
+
+    const result = await generateFollowUpEmail(target.quoteId, target.decision, target.context);
+    if (!result.success || !result.draft) {
+      errors.push({ quoteId: target.quoteId, error: result.error || 'Sin borrador' });
+      continue;
+    }
+
+    const sendResult = await sendFollowUp(target.quoteId, result.draft, target.clientEmail);
+    if (sendResult.success) {
+      sent++;
+    } else {
+      errors.push({ quoteId: target.quoteId, error: sendResult.error || 'Fallo al enviar' });
+    }
+  }
+
+  return { sent, skipped, errors };
 }
